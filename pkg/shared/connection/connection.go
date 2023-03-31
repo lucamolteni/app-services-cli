@@ -2,6 +2,7 @@ package connection
 
 import (
 	"context"
+	kapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/api"
 
 	"github.com/redhat-developer/app-services-cli/pkg/shared/connection/api"
 )
@@ -17,4 +18,6 @@ type Connection interface {
 	Logout(ctx context.Context) error
 	// Method to create the API clients
 	API() api.API
+
+	KiotaAPI() *kapi.ApiRequestBuilder
 }

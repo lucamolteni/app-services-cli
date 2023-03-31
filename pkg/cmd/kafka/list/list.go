@@ -22,13 +22,8 @@ import (
 
 	"github.com/redhat-developer/app-services-cli/internal/build"
 
-	"context"
-	"github.com/microsoft/kiota-abstractions-go/authentication"
-	http "github.com/microsoft/kiota-http-go"
-	"github.com/redhat-developer/app-services-cli/pkg/apisdk"
 	"github.com/redhat-developer/app-services-cli/pkg/apisdk/api"
 	"github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
-	u "net/url"
 )
 
 // row is the details of a Kafka instance needed to print to a table
@@ -97,38 +92,15 @@ func NewListCommand(f *factory.Factory) *cobra.Command {
 	return cmd
 }
 
-type RedHatAccessTokenProvider struct {
-	accessToken string
-}
-
-func (r RedHatAccessTokenProvider) GetAuthorizationToken(context context.Context, url *u.URL, additionalAuthenticationContext map[string]interface{}) (string, error) {
-	return r.accessToken, nil
-}
-
-func (r RedHatAccessTokenProvider) GetAllowedHostsValidator() *authentication.AllowedHostsValidator {
-	return nil
-}
-
 func runList(opts *options) error {
 	conn, err := opts.f.Connection()
 	if err != nil {
 		return err
 	}
 
-	rhApi := conn.API()
-	tokenProvider := RedHatAccessTokenProvider{accessToken: rhApi.GetConfig().AccessToken}
+	rhApi := conn.KiotaAPI()
 
-	provider := authentication.NewBaseBearerTokenAuthenticationProvider(tokenProvider)
-
-	adapter, err := http.NewNetHttpRequestAdapter(provider)
-
-	if err != nil {
-		fmt.Printf("Error creating request adapter: %v\n", err)
-	}
-
-	kiotaClient := apisdk.NewApiClient(adapter)
-
-	kiotaAPI := kiotaClient.Api().Kafkas_mgmt().V1().Kafkas()
+	kiotaAPI := rhApi.Kafkas_mgmt().V1().Kafkas()
 	page := strconv.Itoa(opts.page)
 	size := strconv.Itoa(opts.limit)
 
