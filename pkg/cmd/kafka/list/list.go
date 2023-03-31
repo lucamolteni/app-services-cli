@@ -6,7 +6,7 @@ import (
 	http "github.com/microsoft/kiota-http-go"
 	v1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
 	"github.com/redhat-developer/app-services-cli/pkg/apisdk"
-	"os"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
 	"strconv"
 
 	kafkaFlagutil "github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/flagutil"
@@ -21,8 +21,6 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
 
 	clustermgmt "github.com/redhat-developer/app-services-cli/pkg/shared/connection/api/clustermgmt"
-
-	kafkamgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/client"
 
 	"github.com/spf13/cobra"
 
@@ -129,11 +127,6 @@ func runList(opts *options) error {
 		a = a.Search(query)
 	}
 
-	response, _, err := a.Execute()
-	if err != nil {
-		return err
-	}
-
 	// KIOTA
 
 	tokenProvider := RedHatAccessTokenProvider{accessToken: api.GetConfig().AccessToken}
@@ -141,8 +134,6 @@ func runList(opts *options) error {
 	provider := authentication.NewBaseBearerTokenAuthenticationProvider(tokenProvider)
 
 	adapter, err := http.NewNetHttpRequestAdapter(provider)
-
-	//adapter.SetBaseUrl(opts.)
 
 	if err != nil {
 		fmt.Printf("Error creating request adapter: %v\n", err)
@@ -152,26 +143,24 @@ func runList(opts *options) error {
 
 	kiotaClient := apisdk.NewApiClient(adapter)
 
-	kafkas, err := kiotaClient.Api().Kafkas_mgmt().V1().Kafkas().Get(opts.f.Context, nil)
+	kiotaResponse, err := kiotaClient.Api().Kafkas_mgmt().V1().Kafkas().Get(opts.f.Context, nil)
 
 	if err != nil {
-
-		fmt.Printf("%s: ", err)
-		os.Exit(1)
+		return err
 	}
 
-	for i, x := range kafkas.GetItems() {
-		fmt.Printf("Element %d kafka: %s\n", i, *x.GetName())
-	}
+	//for i, x := range kiotaResponse.GetItems() {
+	//	fmt.Printf("Element %d kafka: %s\n", i, *x.GetName())
+	//}
 
 	// end KIOTA
 
-	if response.Size == 0 && opts.outputFormat == "" {
+	if len(kiotaResponse.GetItems()) == 0 && opts.outputFormat == "" {
 		opts.f.Logger.Info(opts.f.Localizer.MustLocalize("kafka.common.log.info.noKafkaInstances"))
 		return nil
 	}
 
-	clusterIdMap, err := getClusterIdMapFromKafkas(opts, response.GetItems())
+	clusterIdMap, err := getClusterIdMapFromKafkas(opts, kiotaResponse.GetItems())
 	if err != nil {
 		return err
 	}
@@ -190,43 +179,43 @@ func runList(opts *options) error {
 		}
 
 		if currCtx.KafkaID != "" {
-			rows = mapResponseItemsToRows(opts, response.GetItems(), currCtx.KafkaID, &clusterIdMap)
+			rows = mapResponseItemsToRows(opts, kiotaResponse.GetItems(), currCtx.KafkaID, &clusterIdMap)
 		} else {
-			rows = mapResponseItemsToRows(opts, response.GetItems(), "-", &clusterIdMap)
+			rows = mapResponseItemsToRows(opts, kiotaResponse.GetItems(), "-", &clusterIdMap)
 		}
 		dump.Table(opts.f.IOStreams.Out, rows)
 		opts.f.Logger.Info("")
 	default:
-		return dump.Formatted(opts.f.IOStreams.Out, opts.outputFormat, response)
+		return dump.Formatted(opts.f.IOStreams.Out, opts.outputFormat, kiotaResponse)
 	}
 	return nil
 }
 
-func mapResponseItemsToRows(opts *options, kafkas []kafkamgmtclient.KafkaRequest, selectedId string, clusterIdMap *map[string]*v1.Cluster) []kafkaRow {
+func mapResponseItemsToRows(opts *options, kafkas []models.KafkaRequestable, selectedId string, clusterIdMap *map[string]*v1.Cluster) []kafkaRow {
 	rows := make([]kafkaRow, len(kafkas))
 
 	for i := range kafkas {
 		k := kafkas[i]
-		name := k.GetName()
-		if k.GetId() == selectedId {
+		name := *k.GetName()
+		if *k.GetId() == selectedId {
 			name = fmt.Sprintf("%s %s", name, icon.Emoji("✔", "(current)"))
 		}
 
 		var openshiftCluster string
-		if id, ok := k.GetClusterIdOk(); ok {
-			cluster := (*clusterIdMap)[*id]
+		if k.GetClusterId() != nil {
+			cluster := (*clusterIdMap)[*k.GetClusterId()]
 			openshiftCluster = fmt.Sprintf("%v (%v)", cluster.Name(), cluster.ID())
 		} else {
 			openshiftCluster = opts.f.Localizer.MustLocalize("kafka.list.output.openshiftCluster.redhat")
 		}
 
 		row := kafkaRow{
-			ID:               k.GetId(),
+			ID:               *k.GetId(),
 			Name:             name,
-			Owner:            k.GetOwner(),
-			Status:           k.GetStatus(),
-			CloudProvider:    k.GetCloudProvider(),
-			Region:           k.GetRegion(),
+			Owner:            *k.GetOwner(),
+			Status:           *k.GetStatus(),
+			CloudProvider:    *k.GetCloudProvider(),
+			Region:           *k.GetRegion(),
 			OpenshiftCluster: openshiftCluster,
 		}
 
@@ -236,13 +225,13 @@ func mapResponseItemsToRows(opts *options, kafkas []kafkamgmtclient.KafkaRequest
 	return rows
 }
 
-func getClusterIdMapFromKafkas(opts *options, kafkas []kafkamgmtclient.KafkaRequest) (map[string]*v1.Cluster, error) {
+func getClusterIdMapFromKafkas(opts *options, kafkas []models.KafkaRequestable) (map[string]*v1.Cluster, error) {
 	// map[string]struct{} is used remove duplicated ids from being added to the request
 	kafkaClusterIds := make(map[string]struct{})
 	for i := 0; i < len(kafkas); i++ {
 		kafka := kafkas[i]
-		if kafka.GetClusterId() != "" {
-			kafkaClusterIds[kafka.GetClusterId()] = struct{}{}
+		if kafka.GetClusterId() != nil {
+			kafkaClusterIds[*kafka.GetClusterId()] = struct{}{}
 		}
 	}
 
