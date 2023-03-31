@@ -1,8 +1,12 @@
 package list
 
 import (
+	"context"
 	"fmt"
+	http "github.com/microsoft/kiota-http-go"
 	v1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk"
+	"os"
 	"strconv"
 
 	kafkaFlagutil "github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/flagutil"
@@ -23,6 +27,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/redhat-developer/app-services-cli/internal/build"
+
+	authentication "github.com/microsoft/kiota-abstractions-go/authentication"
+	u "net/url"
 )
 
 // row is the details of a Kafka instance needed to print to a table
@@ -91,7 +98,20 @@ func NewListCommand(f *factory.Factory) *cobra.Command {
 	return cmd
 }
 
+type RedHatAccessTokenProvider struct {
+	accessToken string
+}
+
+func (r RedHatAccessTokenProvider) GetAuthorizationToken(context context.Context, url *u.URL, additionalAuthenticationContext map[string]interface{}) (string, error) {
+	return r.accessToken, nil
+}
+
+func (r RedHatAccessTokenProvider) GetAllowedHostsValidator() *authentication.AllowedHostsValidator {
+	return nil
+}
+
 func runList(opts *options) error {
+
 	conn, err := opts.f.Connection()
 	if err != nil {
 		return err
@@ -113,6 +133,38 @@ func runList(opts *options) error {
 	if err != nil {
 		return err
 	}
+
+	// KIOTA
+
+	tokenProvider := RedHatAccessTokenProvider{accessToken: api.GetConfig().AccessToken}
+
+	provider := authentication.NewBaseBearerTokenAuthenticationProvider(tokenProvider)
+
+	adapter, err := http.NewNetHttpRequestAdapter(provider)
+
+	//adapter.SetBaseUrl(opts.)
+
+	if err != nil {
+		fmt.Printf("Error creating request adapter: %v\n", err)
+	}
+
+	fmt.Printf("+++ Using Kiota client\n")
+
+	kiotaClient := apisdk.NewApiClient(adapter)
+
+	kafkas, err := kiotaClient.Api().Kafkas_mgmt().V1().Kafkas().Get(opts.f.Context, nil)
+
+	if err != nil {
+
+		fmt.Printf("%s: ", err)
+		os.Exit(1)
+	}
+
+	for i, x := range kafkas.GetItems() {
+		fmt.Printf("Element %d kafka: %s\n", i, *x.GetName())
+	}
+
+	// end KIOTA
 
 	if response.Size == 0 && opts.outputFormat == "" {
 		opts.f.Logger.Info(opts.f.Localizer.MustLocalize("kafka.common.log.info.noKafkaInstances"))
