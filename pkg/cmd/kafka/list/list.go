@@ -6,6 +6,7 @@ import (
 	http "github.com/microsoft/kiota-http-go"
 	v1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
 	"github.com/redhat-developer/app-services-cli/pkg/apisdk"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/api"
 	"github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
 	"strconv"
 
@@ -109,27 +110,13 @@ func (r RedHatAccessTokenProvider) GetAllowedHostsValidator() *authentication.Al
 }
 
 func runList(opts *options) error {
-
 	conn, err := opts.f.Connection()
 	if err != nil {
 		return err
 	}
 
-	api := conn.API()
-
-	a := api.KafkaMgmt().GetKafkas(opts.f.Context)
-	a = a.Page(strconv.Itoa(opts.page))
-	a = a.Size(strconv.Itoa(opts.limit))
-
-	if opts.search != "" {
-		query := buildQuery(opts.search)
-		opts.f.Logger.Debug(opts.f.Localizer.MustLocalize("kafka.list.log.debug.filteringKafkaList", localize.NewEntry("Search", query)))
-		a = a.Search(query)
-	}
-
-	// KIOTA
-
-	tokenProvider := RedHatAccessTokenProvider{accessToken: api.GetConfig().AccessToken}
+	rhApi := conn.API()
+	tokenProvider := RedHatAccessTokenProvider{accessToken: rhApi.GetConfig().AccessToken}
 
 	provider := authentication.NewBaseBearerTokenAuthenticationProvider(tokenProvider)
 
@@ -139,21 +126,30 @@ func runList(opts *options) error {
 		fmt.Printf("Error creating request adapter: %v\n", err)
 	}
 
-	fmt.Printf("+++ Using Kiota client\n")
-
 	kiotaClient := apisdk.NewApiClient(adapter)
 
-	kiotaResponse, err := kiotaClient.Api().Kafkas_mgmt().V1().Kafkas().Get(opts.f.Context, nil)
+	kiotaAPI := kiotaClient.Api().Kafkas_mgmt().V1().Kafkas()
 
-	if err != nil {
-		return err
+	page := strconv.Itoa(opts.page)
+	size := strconv.Itoa(opts.limit)
+
+	var query *string = nil
+	if opts.search != "" {
+		query = buildQuery(opts.search)
+		opts.f.Logger.Debug(opts.f.Localizer.MustLocalize("kafka.list.log.debug.filteringKafkaList", localize.NewEntry("Search", query)))
 	}
 
-	//for i, x := range kiotaResponse.GetItems() {
-	//	fmt.Printf("Element %d kafka: %s\n", i, *x.GetName())
-	//}
+	kiotaResponse, kerr := kiotaAPI.Get(opts.f.Context, &api.Kafkas_mgmtV1KafkasRequestBuilderGetRequestConfiguration{
+		QueryParameters: &api.Kafkas_mgmtV1KafkasRequestBuilderGetQueryParameters{
+			Page:   &page,
+			Size:   &size,
+			Search: query,
+		},
+	})
 
-	// end KIOTA
+	if kerr != nil {
+		return kerr
+	}
 
 	if len(kiotaResponse.GetItems()) == 0 && opts.outputFormat == "" {
 		opts.f.Logger.Info(opts.f.Localizer.MustLocalize("kafka.common.log.info.noKafkaInstances"))
@@ -268,11 +264,11 @@ func createSearchString(idSet *map[string]struct{}) string {
 	return searchString
 }
 
-func buildQuery(search string) string {
+func buildQuery(search string) *string {
 	queryString := fmt.Sprintf(
 		"name like %%%[1]v%% or owner like %%%[1]v%% or cloud_provider like %%%[1]v%% or region like %%%[1]v%% or status like %%%[1]v%%",
 		search,
 	)
 
-	return queryString
+	return &queryString
 }
