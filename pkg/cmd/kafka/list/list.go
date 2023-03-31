@@ -1,13 +1,8 @@
 package list
 
 import (
-	"context"
 	"fmt"
-	http "github.com/microsoft/kiota-http-go"
 	v1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
-	"github.com/redhat-developer/app-services-cli/pkg/apisdk"
-	"github.com/redhat-developer/app-services-cli/pkg/apisdk/api"
-	"github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
 	"strconv"
 
 	kafkaFlagutil "github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/flagutil"
@@ -27,7 +22,12 @@ import (
 
 	"github.com/redhat-developer/app-services-cli/internal/build"
 
-	authentication "github.com/microsoft/kiota-abstractions-go/authentication"
+	"context"
+	"github.com/microsoft/kiota-abstractions-go/authentication"
+	http "github.com/microsoft/kiota-http-go"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/api"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
 	u "net/url"
 )
 
@@ -129,7 +129,6 @@ func runList(opts *options) error {
 	kiotaClient := apisdk.NewApiClient(adapter)
 
 	kiotaAPI := kiotaClient.Api().Kafkas_mgmt().V1().Kafkas()
-
 	page := strconv.Itoa(opts.page)
 	size := strconv.Itoa(opts.limit)
 
@@ -139,7 +138,7 @@ func runList(opts *options) error {
 		opts.f.Logger.Debug(opts.f.Localizer.MustLocalize("kafka.list.log.debug.filteringKafkaList", localize.NewEntry("Search", query)))
 	}
 
-	kiotaResponse, kerr := kiotaAPI.Get(opts.f.Context, &api.Kafkas_mgmtV1KafkasRequestBuilderGetRequestConfiguration{
+	response, err := kiotaAPI.Get(opts.f.Context, &api.Kafkas_mgmtV1KafkasRequestBuilderGetRequestConfiguration{
 		QueryParameters: &api.Kafkas_mgmtV1KafkasRequestBuilderGetQueryParameters{
 			Page:   &page,
 			Size:   &size,
@@ -147,16 +146,16 @@ func runList(opts *options) error {
 		},
 	})
 
-	if kerr != nil {
-		return kerr
+	if err != nil {
+		return err
 	}
 
-	if len(kiotaResponse.GetItems()) == 0 && opts.outputFormat == "" {
+	if len(response.GetItems()) == 0 && opts.outputFormat == "" {
 		opts.f.Logger.Info(opts.f.Localizer.MustLocalize("kafka.common.log.info.noKafkaInstances"))
 		return nil
 	}
 
-	clusterIdMap, err := getClusterIdMapFromKafkas(opts, kiotaResponse.GetItems())
+	clusterIdMap, err := getClusterIdMapFromKafkas(opts, response.GetItems())
 	if err != nil {
 		return err
 	}
@@ -175,14 +174,14 @@ func runList(opts *options) error {
 		}
 
 		if currCtx.KafkaID != "" {
-			rows = mapResponseItemsToRows(opts, kiotaResponse.GetItems(), currCtx.KafkaID, &clusterIdMap)
+			rows = mapResponseItemsToRows(opts, response.GetItems(), currCtx.KafkaID, &clusterIdMap)
 		} else {
-			rows = mapResponseItemsToRows(opts, kiotaResponse.GetItems(), "-", &clusterIdMap)
+			rows = mapResponseItemsToRows(opts, response.GetItems(), "-", &clusterIdMap)
 		}
 		dump.Table(opts.f.IOStreams.Out, rows)
 		opts.f.Logger.Info("")
 	default:
-		return dump.Formatted(opts.f.IOStreams.Out, opts.outputFormat, kiotaResponse)
+		return dump.Formatted(opts.f.IOStreams.Out, opts.outputFormat, response)
 	}
 	return nil
 }
