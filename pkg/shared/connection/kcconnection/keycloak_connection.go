@@ -3,6 +3,9 @@ package kcconnection
 import (
 	"context"
 	"crypto/x509"
+	"fmt"
+	"github.com/microsoft/kiota-abstractions-go/authentication"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk"
 	"net/http"
 	"net/url"
 
@@ -16,6 +19,9 @@ import (
 	"github.com/redhat-developer/app-services-cli/internal/build"
 
 	"github.com/Nerzal/gocloak/v7"
+
+	khttp "github.com/microsoft/kiota-http-go"
+	kapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/api"
 )
 
 var DefaultScopes = []string{
@@ -117,4 +123,36 @@ func (c *Connection) API() api.API {
 	})
 
 	return apiClient
+}
+
+type RedHatAccessTokenProvider struct {
+	accessToken string
+}
+
+func (r RedHatAccessTokenProvider) GetAuthorizationToken(context context.Context, url *url.URL, additionalAuthenticationContext map[string]interface{}) (string, error) {
+	return r.accessToken, nil
+}
+
+func (r RedHatAccessTokenProvider) GetAllowedHostsValidator() *authentication.AllowedHostsValidator {
+	return nil
+}
+
+// Create a new Kiota API
+func (c *Connection) KiotaAPI() *kapi.ApiRequestBuilder {
+
+	tokenProvider := RedHatAccessTokenProvider{accessToken: c.API().GetConfig().AccessToken}
+
+	provider := authentication.NewBaseBearerTokenAuthenticationProvider(tokenProvider)
+
+	adapter, err := khttp.NewNetHttpRequestAdapter(provider)
+
+	if err != nil {
+		fmt.Printf("Error creating request adapter: %v\n", err)
+	}
+
+	kiotaClient := apisdk.NewApiClient(adapter)
+
+	kiotaAPI := kiotaClient.Api()
+
+	return kiotaAPI
 }

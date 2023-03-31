@@ -5,6 +5,7 @@ package connection
 
 import (
 	"context"
+	iee0edba613874c17c0b63ff8b7bbb50b3c7400fb58707a1087ce0c96eda53dd5 "github.com/redhat-developer/app-services-cli/pkg/apisdk/api"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/connection/api"
 	"sync"
 )
@@ -63,6 +64,11 @@ type ConnectionMock struct {
 	lockAPI           sync.RWMutex
 	lockLogout        sync.RWMutex
 	lockRefreshTokens sync.RWMutex
+}
+
+func (mock *ConnectionMock) KiotaAPI() *iee0edba613874c17c0b63ff8b7bbb50b3c7400fb58707a1087ce0c96eda53dd5.ApiRequestBuilder {
+	//TODO implement me
+	panic("implement me")
 }
 
 // API calls APIFunc.
