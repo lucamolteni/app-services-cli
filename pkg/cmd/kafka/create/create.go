@@ -39,7 +39,7 @@ import (
 	"github.com/spf13/cobra"
 
 	kiota "github.com/redhat-developer/app-services-cli/pkg/apisdk"
-	kmodels "github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
+	kafkamgmtclient "github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
 )
 
 const (
@@ -77,8 +77,8 @@ type options struct {
 	bypassChecks bool
 	dryRun       bool
 
-	kfmClusterList          *kmodels.EnterpriseClusterList
-	selectedCluster         *kmodels.EnterpriseClusterable
+	kfmClusterList          *kafkamgmtclient.EnterpriseClusterList
+	selectedCluster         *kafkamgmtclient.EnterpriseClusterable
 	clusterMap              *map[string]v1.Cluster
 	useEnterpriseFlow       bool
 	hasLegacyQuota          bool
@@ -242,11 +242,7 @@ func runCreate(opts *options) error {
 		}
 	}
 
-	kiotaAPI := conn.KiotaAPI()
-
-	kafkas := kiotaAPI.Kafkas_mgmt().V1().Kafkas()
-
-	var payload *kmodels.KafkaRequestPayload
+	var payload *kafkamgmtclient.KafkaRequestPayload
 	if opts.interactive {
 		f.Logger.Debug()
 		if opts.bypassChecks {
@@ -267,7 +263,7 @@ func runCreate(opts *options) error {
 			opts.region = defaultRegion
 		}
 
-		payload = kmodels.NewKafkaRequestPayload()
+		payload = kafkamgmtclient.NewKafkaRequestPayload()
 
 		payload.SetName(&opts.name)
 		payload.SetRegion(&opts.region)
@@ -363,13 +359,13 @@ func runCreate(opts *options) error {
 		f.Logger.Info(f.Localizer.MustLocalize("kafka.create.log.info.dryRun.success"))
 		return nil
 	}
-	//a = a.Async(true) TODO
 
 	var httpRes *http.Response
 
+	kafkas := conn.KiotaAPI().Kafkas_mgmt().V1().Kafkas()
 	response, err := kafkas.Post(f.Context, payload, nil)
-
 	// how to get http.Response in Kiota?
+	//a = a.Async(true) TODO
 
 	if httpRes != nil {
 		defer httpRes.Body.Close()
@@ -433,9 +429,7 @@ func runCreate(opts *options) error {
 		for svcstatus.IsInstanceCreating(*response.GetStatus()) {
 			time.Sleep(cmdutil.DefaultPollTime)
 
-			//response, httpRes, err = api.KafkaMgmt().GetKafkaById(f.Context, response.GetId()).Execute()
-
-			response, err := kiotaAPI.Kafkas_mgmt().V1().KafkasById(*response.GetId()).Get(f.Context, nil)
+			response, err := conn.KiotaAPI().Kafkas_mgmt().V1().KafkasById(*response.GetId()).Get(f.Context, nil)
 
 			if err != nil {
 				return err
@@ -477,13 +471,13 @@ type promptAnswers struct {
 	Marketplace       string
 }
 
-func setEnterpriseClusterList(opts *options) (*kmodels.EnterpriseClusterList, *map[string]v1.Cluster, error) {
+func setEnterpriseClusterList(opts *options) (*kafkamgmtclient.EnterpriseClusterList, *map[string]v1.Cluster, error) {
 	// Get the list of enterprise clusters in the users organization
 	kfmClusterList, response, err := kafkautil.ListEnterpriseClustersK(opts.f)
 	if err != nil {
 		if response.StatusCode == 403 {
 			emptyClusterMap := make(map[string]v1.Cluster)
-			return &kmodels.EnterpriseClusterList{}, &emptyClusterMap, nil
+			return &kafkamgmtclient.EnterpriseClusterList{}, &emptyClusterMap, nil
 		}
 
 		return nil, nil, fmt.Errorf("%v, %w", response.Status, err)
@@ -558,7 +552,7 @@ func checkForLegacyQuota(opts *options, orgQuotas *accountmgmtutil.OrgQuotas) {
 
 // Show a prompt to allow the user to interactively insert the data for their Kafka
 // nolint:funlen
-func promptKafkaPayload(opts *options, constants *remote.DynamicServiceConstants) (*kmodels.KafkaRequestPayload, error) {
+func promptKafkaPayload(opts *options, constants *remote.DynamicServiceConstants) (*kafkamgmtclient.KafkaRequestPayload, error) {
 	f := opts.f
 
 	// getting org quotas
@@ -667,9 +661,9 @@ func promptKafkaPayload(opts *options, constants *remote.DynamicServiceConstants
 		}
 	}
 
-	var sizes []kmodels.SupportedKafkaInstanceTypesList_instance_types_sizesable
-
-	kpayload := &kmodels.KafkaRequestPayload{}
+	var sizes []kafkamgmtclient.SupportedKafkaInstanceTypesList_instance_types_sizesable
+	// nolint:staticcheck
+	payload := &kafkamgmtclient.KafkaRequestPayload{}
 
 	if opts.useEnterpriseFlow {
 		/*
@@ -710,17 +704,17 @@ func promptKafkaPayload(opts *options, constants *remote.DynamicServiceConstants
 		billingModelEnterprise := CreateNullableString(&enterprise)
 		clusterIdSNS := CreateNullableString((*opts.selectedCluster).GetClusterId())
 
-		kpayload = &kmodels.KafkaRequestPayload{}
+		payload = &kafkamgmtclient.KafkaRequestPayload{}
 
-		kpayload.SetName(&answers.Name)
-		kpayload.SetBillingModel(billingModelEnterprise.Get())
-		kpayload.SetClusterId(clusterIdSNS.Get())
+		payload.SetName(&answers.Name)
+		payload.SetBillingModel(billingModelEnterprise.Get())
+		payload.SetClusterId(clusterIdSNS.Get())
 
 		// enterprise quota spec, kfm will use the default, this should be returned by the `select quota` call
 		// we know someone has enterprise quota here because they have been able to select the
 		// cluster to add a kafka instance too
 		var plan = mapAmsTypeToBackendType(&orgQuota.EnterpriseQuotas[0]) + "." + answers.Size
-		kpayload.SetPlan(&plan)
+		payload.SetPlan(&plan)
 	} else {
 
 		// This flow is for the provisioning of a standard kafka instance
@@ -789,22 +783,22 @@ func promptKafkaPayload(opts *options, constants *remote.DynamicServiceConstants
 		if answers.MarketplaceAcctID != "" {
 			accountIDNullable.Set(&answers.MarketplaceAcctID)
 		}
-		kpayload = &kmodels.KafkaRequestPayload{}
+		payload = &kafkamgmtclient.KafkaRequestPayload{}
 
-		kpayload.SetName(&answers.Name)
-		kpayload.SetRegion(&answers.Region)
-		kpayload.SetCloudProvider(&answers.CloudProvider)
-		kpayload.SetBillingModel(billingNullable.Get())
-		kpayload.SetBillingCloudAccountId(accountIDNullable.Get())
-		kpayload.SetMarketplace(marketplaceProviderNullable.Get())
+		payload.SetName(&answers.Name)
+		payload.SetRegion(&answers.Region)
+		payload.SetCloudProvider(&answers.CloudProvider)
+		payload.SetBillingModel(billingNullable.Get())
+		payload.SetBillingCloudAccountId(accountIDNullable.Get())
+		payload.SetMarketplace(marketplaceProviderNullable.Get())
 
 		printSizeWarningIfNeeded(opts.f, answers.Size, sizes)
 		plan := mapAmsTypeToBackendType(userQuota) + "." + answers.Size
 
-		kpayload.SetPlan(&plan)
+		payload.SetPlan(&plan)
 
 	}
-	return kpayload, nil
+	return payload, nil
 }
 
 func getBillingModel(opts *options, orgQuota *accountmgmtutil.OrgQuotas, answers *promptAnswers) (*promptAnswers, error) {
@@ -970,7 +964,7 @@ func cloudProviderPrompt(f *factory.Factory, answers *promptAnswers) (*promptAns
 }
 
 // This may need to altered as the `name` are mutable on ocm side
-func getClusterNameMap(opts *options, clusterList *kmodels.EnterpriseClusterList) (*map[string]v1.Cluster, error) {
+func getClusterNameMap(opts *options, clusterList *kafkamgmtclient.EnterpriseClusterList) (*map[string]v1.Cluster, error) {
 	//	for each cluster in the list, get the name from ocm and add it to the cluster list
 	str := kafkautil.CreateClusterSearchStringFromKafkaListK(clusterList)
 	ocmClusterList, err := clustermgmt.GetClusterListWithSearchParams(opts.f, opts.clusterManagementApiUrl, opts.accessToken, str, int(cmdutil.ConvertPageValueToInt32(build.DefaultPageNumber)), len(clusterList.GetItems()))
@@ -1001,7 +995,7 @@ func selectClusterPrompt(opts *options) (int, error) {
 	return index, nil
 }
 
-func printSizeWarningIfNeeded(f *factory.Factory, selectedSize string, sizes []kmodels.SupportedKafkaInstanceTypesList_instance_types_sizesable) {
+func printSizeWarningIfNeeded(f *factory.Factory, selectedSize string, sizes []kafkamgmtclient.SupportedKafkaInstanceTypesList_instance_types_sizesable) {
 	for i := range sizes {
 		if *sizes[i].GetId() == selectedSize {
 			f.Logger.Info(f.Localizer.MustLocalize("kafka.create.log.info.sizeUnit",
@@ -1013,7 +1007,7 @@ func printSizeWarningIfNeeded(f *factory.Factory, selectedSize string, sizes []k
 	}
 }
 
-func promptUserForSizes(f *factory.Factory, sizes *[]kmodels.SupportedKafkaInstanceTypesList_instance_types_sizesable) (int, error) {
+func promptUserForSizes(f *factory.Factory, sizes *[]kafkamgmtclient.SupportedKafkaInstanceTypesList_instance_types_sizesable) (int, error) {
 	var index int
 
 	if len(*sizes) == 1 {
@@ -1034,7 +1028,7 @@ func promptUserForSizes(f *factory.Factory, sizes *[]kmodels.SupportedKafkaInsta
 	return index, nil
 }
 
-func getClusterDetails(f *factory.Factory, clusterId string) (*kmodels.EnterpriseClusterable, error) {
+func getClusterDetails(f *factory.Factory, clusterId string) (*kafkamgmtclient.EnterpriseClusterable, error) {
 	conn, err := f.Connection()
 	if err != nil {
 		return nil, err
