@@ -3,8 +3,8 @@ package openshiftclustercmdutil
 import (
 	"fmt"
 	"github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
+	kmodels "github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
 	"github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/flagutil"
-	"github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/client"
 	"strconv"
 
 	"github.com/redhat-developer/app-services-cli/pkg/core/errors"
@@ -42,27 +42,29 @@ func (v *Validator) ValidatorForMachinePoolNodes(val interface{}) error {
 	return nil
 }
 
-func CreatePromptOptionsFromClusters(clusterList *kafkamgmtclient.EnterpriseClusterList, clusterMap *map[string]v1.Cluster) *[]string {
+func CreatePromptOptionsFromClusters(clusterList *kmodels.EnterpriseClusterList, clusterMap *map[string]v1.Cluster) *[]string {
 	promptOptions := []string{}
 	validatedClusters := ValidateClusters(clusterList)
-	for _, cluster := range validatedClusters.Items {
-		ocmCluster := (*clusterMap)[cluster.GetId()]
-		display := ocmCluster.Name() + " (" + cluster.GetId() + ")"
+	for _, cluster := range validatedClusters.GetItems() {
+		ocmCluster := (*clusterMap)[*cluster.GetId()]
+		display := ocmCluster.Name() + " (" + *cluster.GetId() + ")"
 		promptOptions = append(promptOptions, display)
 	}
 	return &promptOptions
 }
 
-func ValidateClusters(clusterList *kafkamgmtclient.EnterpriseClusterList) *kafkamgmtclient.EnterpriseClusterList {
+func ValidateClusters(clusterList *kmodels.EnterpriseClusterList) *kmodels.EnterpriseClusterList {
 	// if cluster is in a ready state add it to the list of clusters
-	items := make([]kafkamgmtclient.EnterpriseClusterListItem, 0, len(clusterList.Items))
-	for _, cluster := range clusterList.Items {
-		if *cluster.Status == "ready" {
+	items := make([]kmodels.EnterpriseClusterListItemable, 0, len(clusterList.GetItems()))
+	for _, cluster := range clusterList.GetItems() {
+		if *cluster.GetStatus() == "ready" {
 			items = append(items, cluster)
 		}
 	}
 
-	newClusterList := kafkamgmtclient.NewEnterpriseClusterList(clusterList.Kind, clusterList.Page, int32(len(items)), clusterList.Total, items)
+	//newClusterList := kafkamgmtclient.NewEnterpriseClusterList(clusterList.Kind, clusterList.Page, int32(len(items)), clusterList.Total, items)
+	newClusterList := kmodels.NewEnterpriseClusterList()
+	newClusterList.SetItems(items)
 	return newClusterList
 }
 
