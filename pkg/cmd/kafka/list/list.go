@@ -98,9 +98,9 @@ func runList(opts *options) error {
 		return err
 	}
 
-	rhApi := conn.KiotaAPI()
+	kiotaAPI := conn.KiotaAPI()
 
-	kiotaAPI := rhApi.Kafkas_mgmt().V1().Kafkas()
+	kafkas := kiotaAPI.Kafkas_mgmt().V1().Kafkas()
 	page := strconv.Itoa(opts.page)
 	size := strconv.Itoa(opts.limit)
 
@@ -110,7 +110,7 @@ func runList(opts *options) error {
 		opts.f.Logger.Debug(opts.f.Localizer.MustLocalize("kafka.list.log.debug.filteringKafkaList", localize.NewEntry("Search", query)))
 	}
 
-	response, err := kiotaAPI.Get(opts.f.Context, &api.Kafkas_mgmtV1KafkasRequestBuilderGetRequestConfiguration{
+	response, err := kafkas.Get(opts.f.Context, &api.Kafkas_mgmtV1KafkasRequestBuilderGetRequestConfiguration{
 		QueryParameters: &api.Kafkas_mgmtV1KafkasRequestBuilderGetQueryParameters{
 			Page:   &page,
 			Size:   &size,
