@@ -4,6 +4,8 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/shared/accountmgmtutil"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
 	kafkamgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/client"
+
+	kmodels "github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
 )
 
 // Types we use on backend to map AMS Quotas
@@ -44,6 +46,15 @@ func GetValidKafkaSizesLabels(sizes []kafkamgmtclient.SupportedKafkaSize) []stri
 	var labels []string = make([]string, len(sizes))
 	for i := range sizes {
 		labels[i] = sizes[i].GetId()
+	}
+
+	return labels
+}
+
+func GetValidKafkaSizesLabelsK(sizes []kmodels.SupportedKafkaInstanceTypesList_instance_types_sizesable) []string {
+	var labels []string = make([]string, len(sizes))
+	for i := range sizes {
+		labels[i] = *sizes[i].GetId()
 	}
 
 	return labels
@@ -154,6 +165,28 @@ func FetchInstanceTypes(f *factory.Factory, providerID string, regionId string) 
 
 }
 
+func FetchInstanceTypesK(f *factory.Factory, providerID string, regionId string) ([]kmodels.SupportedKafkaInstanceType, error) {
+
+	//conn, err := f.Connection()
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	//instanceTypes, _, err := conn.API().
+	//	KafkaMgmt().
+	//	GetInstanceTypesByCloudProviderAndRegion(f.Context, providerID, regionId).
+	//	Execute()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//return instanceTypes.GetInstanceTypes(), nil
+
+	// TODO Kiota
+	supportedKafkaInstanceTypes := make([]kmodels.SupportedKafkaInstanceType, 0)
+	return supportedKafkaInstanceTypes, nil
+}
+
 // FetchValidKafkaSizes returns list of the valid instance sizes for the specified region and ams instance types
 func FetchValidKafkaSizes(f *factory.Factory,
 	providerID string, regionId string, amsType accountmgmtutil.QuotaSpec) ([]kafkamgmtclient.SupportedKafkaSize, error) {
@@ -183,6 +216,45 @@ func FetchValidKafkaSizes(f *factory.Factory,
 				instanceSizes := instanceType.GetSizes()
 				for i := range instanceSizes {
 					if instanceSizes[i].GetQuotaConsumed() <= int32(amsType.Quota) {
+						validSizes = append(validSizes, instanceSizes[i])
+					}
+				}
+			}
+		}
+	}
+
+	return validSizes, nil
+}
+
+// FetchValidKafkaSizes returns list of the valid instance sizes for the specified region and ams instance types
+func FetchValidKafkaSizesK(f *factory.Factory,
+	providerID string, regionId string, amsType accountmgmtutil.QuotaSpec) ([]kmodels.SupportedKafkaInstanceTypesList_instance_types_sizesable, error) {
+
+	validSizes := []kmodels.SupportedKafkaInstanceTypesList_instance_types_sizesable{}
+
+	instanceTypes, err := FetchInstanceTypesK(f, providerID, regionId)
+	if err != nil {
+		return nil, err
+	}
+
+	desiredInstanceType := mapAmsTypeToBackendType(&amsType)
+
+	// Temporary workaround to be removed
+	if desiredInstanceType == DeveloperType {
+		for _, instanceType := range instanceTypes {
+			if desiredInstanceType == *instanceType.GetId() {
+				instanceSizes := instanceType.GetSizes()
+				for i := range instanceSizes {
+					validSizes = append(validSizes, instanceSizes[i])
+				}
+			}
+		}
+	} else {
+		for _, instanceType := range instanceTypes {
+			if desiredInstanceType == *instanceType.GetId() {
+				instanceSizes := instanceType.GetSizes()
+				for i := range instanceSizes {
+					if *instanceSizes[i].GetQuotaConsumed() <= int32(amsType.Quota) {
 						validSizes = append(validSizes, instanceSizes[i])
 					}
 				}
