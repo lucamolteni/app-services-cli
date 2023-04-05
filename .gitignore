@@ -18,4 +18,7 @@ node_modules
 .idea/
 .vscode/settings.json
 
+pkg/apisdk
+hack/kiota
+
 .notes

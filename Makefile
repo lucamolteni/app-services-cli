@@ -42,6 +42,7 @@ lint: lint-lang 	## Lint Go files for errors
 
 generate: ## Scan code for generate comments and run generators
 	go generate ./...
+	./hack/generate-kiota.sh
 
 # Build binaries
 # NOTE it may be necessary to use CGO_ENABLED=0 for backwards compatibility with centos7 if not using centos7

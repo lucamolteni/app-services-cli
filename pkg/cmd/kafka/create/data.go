@@ -5,7 +5,7 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
 	kafkamgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/client"
 
-	kmodels "github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
+	kmodels "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
 )
 
 // Types we use on backend to map AMS Quotas

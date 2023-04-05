@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"github.com/microsoft/kiota-abstractions-go/authentication"
-	"github.com/redhat-developer/app-services-cli/pkg/apisdk"
 	"net/http"
 	"net/url"
 
@@ -21,7 +20,8 @@ import (
 	"github.com/Nerzal/gocloak/v7"
 
 	khttp "github.com/microsoft/kiota-http-go"
-	kapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/api"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt"
+	kapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
 )
 
 var DefaultScopes = []string{
@@ -150,7 +150,7 @@ func (c *Connection) KiotaAPI() *kapi.ApiRequestBuilder {
 		fmt.Printf("Error creating request adapter: %v\n", err)
 	}
 
-	kiotaClient := apisdk.NewApiClient(adapter)
+	kiotaClient := kafkamgmt.NewApiClient(adapter)
 
 	kiotaAPI := kiotaClient.Api()
 

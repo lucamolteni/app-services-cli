@@ -38,8 +38,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	kiota "github.com/redhat-developer/app-services-cli/pkg/apisdk"
-	kafkamgmtclient "github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
+	kafkamgmtclient "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
+
+	nullablestring "github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil"
 )
 
 const (
@@ -768,9 +769,9 @@ func promptKafkaPayload(opts *options, constants *remote.DynamicServiceConstants
 
 		answers.Size = *sizes[index].GetId()
 
-		accountIDNullable := kiota.NullableString{}
-		marketplaceProviderNullable := kiota.NullableString{}
-		billingNullable := kiota.NullableString{}
+		accountIDNullable := nullablestring.NullableString{}
+		marketplaceProviderNullable := nullablestring.NullableString{}
+		billingNullable := nullablestring.NullableString{}
 
 		if answers.BillingModel != "" {
 			billingNullable.Set(&answers.BillingModel)
@@ -1042,6 +1043,6 @@ func getClusterDetails(f *factory.Factory, clusterId string) (*kafkamgmtclient.E
 	return &cluster, nil
 }
 
-func CreateNullableString(str *string) kiota.NullableString {
-	return *kiota.NewNullableString(str)
+func CreateNullableString(str *string) nullablestring.NullableString {
+	return *nullablestring.NewNullableString(str)
 }

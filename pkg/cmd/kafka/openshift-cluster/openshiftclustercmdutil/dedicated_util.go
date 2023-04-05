@@ -3,7 +3,7 @@ package openshiftclustercmdutil
 import (
 	"fmt"
 	"github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
-	kmodels "github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
+	kmodels "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
 	"github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/flagutil"
 	"strconv"
 
@@ -55,17 +55,21 @@ func CreatePromptOptionsFromClusters(clusterList *kmodels.EnterpriseClusterList,
 
 func ValidateClusters(clusterList *kmodels.EnterpriseClusterList) *kmodels.EnterpriseClusterList {
 	// if cluster is in a ready state add it to the list of clusters
-	items := make([]kmodels.EnterpriseClusterListItemable, 0, len(clusterList.GetItems()))
-	for _, cluster := range clusterList.GetItems() {
-		if *cluster.GetStatus() == "ready" {
-			items = append(items, cluster)
-		}
-	}
+	//items := make([]kmodels.EnterpriseClusterListItemable, 0, len(clusterList.GetItems()))
+	//for _, cluster := range clusterList.GetItems() {
+	//	if *cluster.GetStatus() == "ready" {
+	//		items = append(items, cluster)
+	//	}
+	//}
+	//
+	////newClusterList := kafkamgmtclient.NewEnterpriseClusterList(clusterList.Kind, clusterList.Page, int32(len(items)), clusterList.Total, items)
+	//newClusterList := kmodels.NewEnterpriseClusterList()
+	//newClusterList.SetItems(items)
+	//return newClusterList
 
-	//newClusterList := kafkamgmtclient.NewEnterpriseClusterList(clusterList.Kind, clusterList.Page, int32(len(items)), clusterList.Total, items)
-	newClusterList := kmodels.NewEnterpriseClusterList()
-	newClusterList.SetItems(items)
-	return newClusterList
+	// TODO EnterpriseClusterListItemable doesn't exist
+
+	return nil
 }
 
 func HideClusterMgmtFlags(flags *flagutil.FlagSet) {
