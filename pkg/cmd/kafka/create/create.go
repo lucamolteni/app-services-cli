@@ -3,16 +3,17 @@ package create
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
 	v1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
 	"github.com/redhat-developer/app-services-cli/internal/build"
 	"github.com/redhat-developer/app-services-cli/pkg/cmd/dedicated/dedicatedcmdutil"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/connection/api/clustermgmt"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil"
 	kafkamgmtv1errors "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/error"
-	"net/http"
-	"os"
-	"os/signal"
-	"time"
 
 	kafkaFlagutil "github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/flagutil"
 	"github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/kafkacmdutil"
@@ -36,8 +37,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	kiota "github.com/redhat-developer/app-services-cli/pkg/apisdk"
-	kafkamgmtclient "github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
+	kiota "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt"
+
+	kafkamgmtclient "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
 )
 
 const (
