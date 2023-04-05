@@ -5,7 +5,7 @@ package connection
 
 import (
 	"context"
-	kafkamgmt_api "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
+	iee0edba613874c17c0b63ff8b7bbb50b3c7400fb58707a1087ce0c96eda53dd5 "github.com/redhat-developer/app-services-cli/pkg/apisdk/api"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/connection/api"
 	"sync"
 )
@@ -20,11 +20,8 @@ var _ Connection = &ConnectionMock{}
 //
 //		// make and configure a mocked Connection
 //		mockedConnection := &ConnectionMock{
-//			APIFunc: func() api.API {
+//			APIFunc: func() apis.API {
 //				panic("mock out the API method")
-//			},
-//			KiotaAPIFunc: func() *kafkamgmt_api.ApiRequestBuilder {
-//				panic("mock out the KiotaAPI method")
 //			},
 //			LogoutFunc: func(ctx context.Context) error {
 //				panic("mock out the Logout method")
@@ -42,9 +39,6 @@ type ConnectionMock struct {
 	// APIFunc mocks the API method.
 	APIFunc func() api.API
 
-	// KiotaAPIFunc mocks the KiotaAPI method.
-	KiotaAPIFunc func() *kafkamgmt_api.ApiRequestBuilder
-
 	// LogoutFunc mocks the Logout method.
 	LogoutFunc func(ctx context.Context) error
 
@@ -55,9 +49,6 @@ type ConnectionMock struct {
 	calls struct {
 		// API holds details about calls to the API method.
 		API []struct {
-		}
-		// KiotaAPI holds details about calls to the KiotaAPI method.
-		KiotaAPI []struct {
 		}
 		// Logout holds details about calls to the Logout method.
 		Logout []struct {
@@ -71,9 +62,13 @@ type ConnectionMock struct {
 		}
 	}
 	lockAPI           sync.RWMutex
-	lockKiotaAPI      sync.RWMutex
 	lockLogout        sync.RWMutex
 	lockRefreshTokens sync.RWMutex
+}
+
+func (mock *ConnectionMock) KiotaAPI() *iee0edba613874c17c0b63ff8b7bbb50b3c7400fb58707a1087ce0c96eda53dd5.ApiRequestBuilder {
+	//TODO implement me
+	panic("implement me")
 }
 
 // API calls APIFunc.
@@ -100,33 +95,6 @@ func (mock *ConnectionMock) APICalls() []struct {
 	mock.lockAPI.RLock()
 	calls = mock.calls.API
 	mock.lockAPI.RUnlock()
-	return calls
-}
-
-// KiotaAPI calls KiotaAPIFunc.
-func (mock *ConnectionMock) KiotaAPI() *kafkamgmt_api.ApiRequestBuilder {
-	if mock.KiotaAPIFunc == nil {
-		panic("ConnectionMock.KiotaAPIFunc: method is nil but Connection.KiotaAPI was just called")
-	}
-	callInfo := struct {
-	}{}
-	mock.lockKiotaAPI.Lock()
-	mock.calls.KiotaAPI = append(mock.calls.KiotaAPI, callInfo)
-	mock.lockKiotaAPI.Unlock()
-	return mock.KiotaAPIFunc()
-}
-
-// KiotaAPICalls gets all the calls that were made to KiotaAPI.
-// Check the length with:
-//
-//	len(mockedConnection.KiotaAPICalls())
-func (mock *ConnectionMock) KiotaAPICalls() []struct {
-} {
-	var calls []struct {
-	}
-	mock.lockKiotaAPI.RLock()
-	calls = mock.calls.KiotaAPI
-	mock.lockKiotaAPI.RUnlock()
 	return calls
 }
 

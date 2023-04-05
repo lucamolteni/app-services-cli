@@ -40,11 +40,6 @@ require (
 )
 
 require (
-	github.com/microsoft/kiota-abstractions-go v0.19.0
-	github.com/microsoft/kiota-http-go v0.16.1
-	github.com/microsoft/kiota-serialization-form-go v0.9.0
-	github.com/microsoft/kiota-serialization-json-go v0.9.0
-	github.com/microsoft/kiota-serialization-text-go v0.7.0
 	github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/accountmgmt/apiv1/client v0.0.0-20230216114230-4ff0373de47f
 	github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/connectormgmt v0.0.0-20230227102917-4a6410d5d4c2
 	github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkainstance v0.0.0-20230227102917-4a6410d5d4c2
@@ -156,6 +151,11 @@ require (
 	github.com/itchyny/gojq v0.12.10 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/microsoft/kiota-abstractions-go v0.19.0 // indirect
+	github.com/microsoft/kiota-http-go v0.16.1 // indirect
+	github.com/microsoft/kiota-serialization-form-go v0.9.0 // indirect
+	github.com/microsoft/kiota-serialization-json-go v0.9.0 // indirect
+	github.com/microsoft/kiota-serialization-text-go v0.7.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/onsi/ginkgo/v2 v2.6.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

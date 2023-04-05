@@ -3,12 +3,11 @@ package kafkautil
 import (
 	"context"
 	"fmt"
-	"net/http"
-
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
 	kafkamgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/client"
+	"net/http"
 
-	kmodels "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
+	kmodels "github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
 )
 
 func CreateClusterSearchStringFromKafkaList(kfmClusterList *kafkamgmtclient.EnterpriseClusterList) string {

@@ -2,9 +2,8 @@ package list
 
 import (
 	"fmt"
-	"strconv"
-
 	v1 "github.com/openshift-online/ocm-sdk-go/clustersmgmt/v1"
+	"strconv"
 
 	kafkaFlagutil "github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/flagutil"
 	"github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/kafkacmdutil"
@@ -23,8 +22,8 @@ import (
 
 	"github.com/redhat-developer/app-services-cli/internal/build"
 
-	"github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
-	"github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/api"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/models"
 )
 
 // row is the details of a Kafka instance needed to print to a table

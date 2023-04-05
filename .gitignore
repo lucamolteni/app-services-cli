@@ -19,4 +19,3 @@ node_modules
 .vscode/settings.json
 
 pkg/apisdk
-hack/kiota

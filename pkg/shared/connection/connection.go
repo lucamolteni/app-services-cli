@@ -2,8 +2,7 @@ package connection
 
 import (
 	"context"
-
-	kapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
+	kapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/api"
 
 	"github.com/redhat-developer/app-services-cli/pkg/shared/connection/api"
 )
