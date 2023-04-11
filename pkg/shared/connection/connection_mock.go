@@ -5,14 +5,11 @@ package connection
 
 import (
 	"context"
-	kafkamgmt_api "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
+	kapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
+	svcaccmgmt "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/apis"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/connection/api"
 	"sync"
 )
-
-// Ensure, that ConnectionMock does implement Connection.
-// If this is not the case, regenerate this file with moq.
-var _ Connection = &ConnectionMock{}
 
 // ConnectionMock is a mock implementation of Connection.
 //
@@ -23,7 +20,7 @@ var _ Connection = &ConnectionMock{}
 //			APIFunc: func() api.API {
 //				panic("mock out the API method")
 //			},
-//			KiotaAPIFunc: func() *kafkamgmt_api.ApiRequestBuilder {
+//			KiotaAPIFunc: func() *kapi.ApiRequestBuilder {
 //				panic("mock out the KiotaAPI method")
 //			},
 //			LogoutFunc: func(ctx context.Context) error {
@@ -31,6 +28,9 @@ var _ Connection = &ConnectionMock{}
 //			},
 //			RefreshTokensFunc: func(ctx context.Context) error {
 //				panic("mock out the RefreshTokens method")
+//			},
+//			SvcaccmgmtAPIFunc: func() *svcaccmgmt.ApisRequestBuilder {
+//				panic("mock out the SvcaccmgmtAPI method")
 //			},
 //		}
 //
@@ -43,13 +43,16 @@ type ConnectionMock struct {
 	APIFunc func() api.API
 
 	// KiotaAPIFunc mocks the KiotaAPI method.
-	KiotaAPIFunc func() *kafkamgmt_api.ApiRequestBuilder
+	KiotaAPIFunc func() *kapi.ApiRequestBuilder
 
 	// LogoutFunc mocks the Logout method.
 	LogoutFunc func(ctx context.Context) error
 
 	// RefreshTokensFunc mocks the RefreshTokens method.
 	RefreshTokensFunc func(ctx context.Context) error
+
+	// SvcaccmgmtAPIFunc mocks the SvcaccmgmtAPI method.
+	SvcaccmgmtAPIFunc func() *svcaccmgmt.ApisRequestBuilder
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -69,11 +72,15 @@ type ConnectionMock struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
+		// SvcaccmgmtAPI holds details about calls to the SvcaccmgmtAPI method.
+		SvcaccmgmtAPI []struct {
+		}
 	}
 	lockAPI           sync.RWMutex
 	lockKiotaAPI      sync.RWMutex
 	lockLogout        sync.RWMutex
 	lockRefreshTokens sync.RWMutex
+	lockSvcaccmgmtAPI sync.RWMutex
 }
 
 // API calls APIFunc.
@@ -104,7 +111,7 @@ func (mock *ConnectionMock) APICalls() []struct {
 }
 
 // KiotaAPI calls KiotaAPIFunc.
-func (mock *ConnectionMock) KiotaAPI() *kafkamgmt_api.ApiRequestBuilder {
+func (mock *ConnectionMock) KiotaAPI() *kapi.ApiRequestBuilder {
 	if mock.KiotaAPIFunc == nil {
 		panic("ConnectionMock.KiotaAPIFunc: method is nil but Connection.KiotaAPI was just called")
 	}
@@ -191,5 +198,32 @@ func (mock *ConnectionMock) RefreshTokensCalls() []struct {
 	mock.lockRefreshTokens.RLock()
 	calls = mock.calls.RefreshTokens
 	mock.lockRefreshTokens.RUnlock()
+	return calls
+}
+
+// SvcaccmgmtAPI calls SvcaccmgmtAPIFunc.
+func (mock *ConnectionMock) SvcaccmgmtAPI() *svcaccmgmt.ApisRequestBuilder {
+	if mock.SvcaccmgmtAPIFunc == nil {
+		panic("ConnectionMock.SvcaccmgmtAPIFunc: method is nil but Connection.SvcaccmgmtAPI was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockSvcaccmgmtAPI.Lock()
+	mock.calls.SvcaccmgmtAPI = append(mock.calls.SvcaccmgmtAPI, callInfo)
+	mock.lockSvcaccmgmtAPI.Unlock()
+	return mock.SvcaccmgmtAPIFunc()
+}
+
+// SvcaccmgmtAPICalls gets all the calls that were made to SvcaccmgmtAPI.
+// Check the length with:
+//
+//	len(mockedConnection.SvcaccmgmtAPICalls())
+func (mock *ConnectionMock) SvcaccmgmtAPICalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockSvcaccmgmtAPI.RLock()
+	calls = mock.calls.SvcaccmgmtAPI
+	mock.lockSvcaccmgmtAPI.RUnlock()
 	return calls
 }

@@ -3,6 +3,7 @@ package connection
 import (
 	"context"
 	kapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
+	svcaccmgmt "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/apis"
 
 	"github.com/redhat-developer/app-services-cli/pkg/shared/connection/api"
 )
@@ -20,4 +21,6 @@ type Connection interface {
 	API() api.API
 
 	KiotaAPI() *kapi.ApiRequestBuilder
+
+	SvcaccmgmtAPI() *svcaccmgmt.ApisRequestBuilder
 }

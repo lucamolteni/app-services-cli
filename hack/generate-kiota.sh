@@ -35,3 +35,12 @@ $COMMAND generate \
   --clean-output \
   -o $SCRIPT_DIR/../pkg/apisdk/kafkamgmt \
   --namespace-name github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt
+
+# TODO this is not the right openapi file
+$COMMAND generate \
+  --language go \
+  --openapi https://raw.githubusercontent.com/redhat-developer/app-services-sdk-go/e660b42dabba43265b622693c94c748fb78ca62c/.openapi/service-accounts.yaml \
+  --clean-output \
+  -o $SCRIPT_DIR/../pkg/apisdk/svcacctmgmt \
+  --namespace-name github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt
+

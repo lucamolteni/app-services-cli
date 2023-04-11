@@ -21,7 +21,9 @@ import (
 
 	khttp "github.com/microsoft/kiota-http-go"
 	"github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt"
-	kapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
+	kafkamgmtapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt"
+	svcacctmgmtapis "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/apis"
 )
 
 var DefaultScopes = []string{
@@ -137,8 +139,8 @@ func (r RedHatAccessTokenProvider) GetAllowedHostsValidator() *authentication.Al
 	return nil
 }
 
-// Create a new Kiota API
-func (c *Connection) KiotaAPI() *kapi.ApiRequestBuilder {
+// Create a new Kiota Kafka API
+func (c *Connection) KiotaAPI() *kafkamgmtapi.ApiRequestBuilder {
 
 	tokenProvider := RedHatAccessTokenProvider{accessToken: c.API().GetConfig().AccessToken}
 
@@ -153,6 +155,26 @@ func (c *Connection) KiotaAPI() *kapi.ApiRequestBuilder {
 	kiotaClient := kafkamgmt.NewApiClient(adapter)
 
 	kiotaAPI := kiotaClient.Api()
+
+	return kiotaAPI
+}
+
+// Create a new Kiota API
+func (c *Connection) SvcaccmgmtAPI() *svcacctmgmtapis.ApisRequestBuilder {
+
+	tokenProvider := RedHatAccessTokenProvider{accessToken: c.API().GetConfig().AccessToken}
+
+	provider := authentication.NewBaseBearerTokenAuthenticationProvider(tokenProvider)
+
+	adapter, err := khttp.NewNetHttpRequestAdapter(provider)
+
+	if err != nil {
+		fmt.Printf("Error creating request adapter: %v\n", err)
+	}
+
+	kiotaClient := svcacctmgmt.NewApiClient(adapter)
+
+	kiotaAPI := kiotaClient.Apis()
 
 	return kiotaAPI
 }
