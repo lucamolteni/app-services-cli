@@ -18,11 +18,11 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/core/logging"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
 
-	svcacctmgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/serviceaccountmgmt/apiv1/client"
-	svcacctmgmterrors "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/serviceaccountmgmt/apiv1/error"
-
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
+
+	svcacctmgmt "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/models"
+	"net/http"
 )
 
 type options struct {
@@ -128,33 +128,34 @@ func runCreate(opts *options) error {
 	spinner.SetSuffix(opts.localizer.MustLocalize("serviceAccount.create.log.info.creating"))
 	spinner.Start()
 	// create the service account
-	serviceAccountPayload := svcacctmgmtclient.ServiceAccountCreateRequestData{Name: opts.shortDescription}
+	serviceAccountPayload := &svcacctmgmt.ServiceAccountCreateRequestData{}
+	serviceAccountPayload.SetName(&opts.shortDescription)
 
-	serviceacct, httpRes, err := conn.API().
-		ServiceAccountMgmt().
-		CreateServiceAccount(opts.Context).
-		ServiceAccountCreateRequestData(serviceAccountPayload).
-		Execute()
+	var httpRes *http.Response
+
+	serviceacct, err :=
+		conn.SvcaccmgmtAPI().Service_accounts().V1().Post(opts.Context, serviceAccountPayload, nil)
+
 	spinner.Stop()
 
 	if httpRes != nil {
 		defer httpRes.Body.Close()
 	}
 
-	if apiErr := svcacctmgmterrors.GetAPIError(err); apiErr != nil {
-		switch apiErr.GetError() {
-		case "service_account_limit_exceeded":
-			return opts.localizer.MustLocalizeError("serviceAccount.common.error.limitExceeded")
-		default:
-			return err
-		}
-	}
+	//if apiErr := svcacctmgmtutil.GetAPIErrorK(err); apiErr != nil {
+	//	switch apiErr.GetError() {
+	//	case "service_account_limit_exceeded":
+	//		return opts.localizer.MustLocalizeError("serviceAccount.common.error.limitExceeded")
+	//	default:
+	//		return err
+	//	}
+	//}
 
-	opts.Logger.Info(icon.SuccessPrefix(), opts.localizer.MustLocalize("serviceAccount.create.log.info.createdSuccessfully", localize.NewEntry("ID", serviceacct.GetId())))
+	opts.Logger.Info(icon.SuccessPrefix(), opts.localizer.MustLocalize("serviceAccount.create.log.info.createdSuccessfully", localize.NewEntry("ID", *serviceacct.GetId())))
 
 	creds := &credentials.Credentials{
-		ClientID:     serviceacct.GetClientId(),
-		ClientSecret: serviceacct.GetSecret(),
+		ClientID:     *serviceacct.GetClientId(),
+		ClientSecret: *serviceacct.GetSecret(),
 		TokenURL:     conn.API().GetConfig().AuthURL.String() + "/protocol/openid-connect/token",
 	}
 
