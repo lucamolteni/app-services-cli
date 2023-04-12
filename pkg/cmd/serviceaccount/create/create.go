@@ -134,7 +134,7 @@ func runCreate(opts *options) error {
 	var httpRes *http.Response
 
 	serviceacct, err :=
-		conn.SvcaccmgmtAPI().Service_accounts().V1().Post(opts.Context, serviceAccountPayload, nil)
+		conn.KiotaAPI().ServiceAccountMgmt().V1().Post(opts.Context, serviceAccountPayload, nil)
 
 	spinner.Stop()
 

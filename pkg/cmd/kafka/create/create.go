@@ -363,7 +363,7 @@ func runCreate(opts *options) error {
 
 	var httpRes *http.Response
 
-	kafkas := conn.KiotaAPI().Kafkas_mgmt().V1().Kafkas()
+	kafkas := conn.KiotaAPI().KafkaMgmt().V1().Kafkas()
 	response, err := kafkas.Post(f.Context, payload, nil)
 	// how to get http.Response in Kiota?
 	//a = a.Async(true) TODO
@@ -430,7 +430,7 @@ func runCreate(opts *options) error {
 		for svcstatus.IsInstanceCreating(*response.GetStatus()) {
 			time.Sleep(cmdutil.DefaultPollTime)
 
-			response, err := conn.KiotaAPI().Kafkas_mgmt().V1().KafkasById(*response.GetId()).Get(f.Context, nil)
+			response, err := conn.KiotaAPI().KafkaMgmt().V1().KafkasById(*response.GetId()).Get(f.Context, nil)
 
 			if err != nil {
 				return err
@@ -1035,7 +1035,7 @@ func getClusterDetails(f *factory.Factory, clusterId string) (*kafkamgmtclient.E
 		return nil, err
 	}
 	client := conn.KiotaAPI()
-	cluster, err := client.Kafkas_mgmt().V1().ClustersById(clusterId).Get(f.Context, nil)
+	cluster, err := client.KafkaMgmt().V1().ClustersById(clusterId).Get(f.Context, nil)
 	if err != nil {
 		return nil, err
 	}

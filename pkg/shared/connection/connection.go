@@ -2,10 +2,8 @@ package connection
 
 import (
 	"context"
-	kapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
-	svcaccmgmt "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/apis"
-
 	"github.com/redhat-developer/app-services-cli/pkg/shared/connection/api"
+	"github.com/redhat-developer/app-services-cli/pkg/shared/connection/kapi"
 )
 
 // Connection is an interface which defines methods for interacting
@@ -19,8 +17,6 @@ type Connection interface {
 	Logout(ctx context.Context) error
 	// Method to create the API clients
 	API() api.API
-
-	KiotaAPI() *kapi.ApiRequestBuilder
-
-	SvcaccmgmtAPI() *svcaccmgmt.ApisRequestBuilder
+	// Method to create the Kiota API clients
+	KiotaAPI() kapi.KiotaAPI
 }

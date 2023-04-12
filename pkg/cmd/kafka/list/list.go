@@ -100,7 +100,7 @@ func runList(opts *options) error {
 
 	kiotaAPI := conn.KiotaAPI()
 
-	kafkas := kiotaAPI.Kafkas_mgmt().V1().Kafkas()
+	kafkas := kiotaAPI.KafkaMgmt().V1().Kafkas()
 	page := strconv.Itoa(opts.page)
 	size := strconv.Itoa(opts.limit)
 
