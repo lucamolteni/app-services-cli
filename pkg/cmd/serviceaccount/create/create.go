@@ -146,7 +146,7 @@ func runCreate(opts *options) error {
 		defer httpRes.Body.Close()
 	}
 
-	if apiErr := svcacctmgmterrors.GetAPIErrorK(err); apiErr != nil {
+	if apiErr := svcacctmgmterrors.GetAPIError(err); apiErr != nil {
 		switch apiErr.GetError() {
 		case "service_account_limit_exceeded":
 			return opts.localizer.MustLocalizeError("serviceAccount.common.error.limitExceeded")

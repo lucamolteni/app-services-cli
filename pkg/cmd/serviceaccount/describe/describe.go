@@ -78,7 +78,7 @@ func runDescribe(opts *options) error {
 
 	res, err := api.ServiceAccountMgmt().V1ById(opts.id).Get(opts.Context, nil)
 
-	if apiErr := svcacctmgmterrors.GetAPIErrorK(err); apiErr != nil {
+	if apiErr := svcacctmgmterrors.GetAPIError(err); apiErr != nil {
 		switch apiErr.GetError() {
 		case "service_account_not_found":
 			return opts.localizer.MustLocalizeError("serviceAccount.common.error.notFoundError", localize.NewEntry("ID", opts.id))

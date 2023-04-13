@@ -5,7 +5,7 @@ import (
 	models "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/models"
 )
 
-func GetAPIErrorK(err error) *ErrorWithString {
+func GetAPIError(err error) *ErrorWithString {
 
 	var redHatErrorRepresentationable models.RedHatErrorRepresentationable
 

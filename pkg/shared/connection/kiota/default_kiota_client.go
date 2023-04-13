@@ -19,7 +19,11 @@ import (
 
 // defaultKiotaAPIClient is a type which defines a number of API creator functions
 type defaultKiotaAPIClient struct {
-	config *api.Config
+	config api.Config
+}
+
+func (a *defaultKiotaAPIClient) GetConfig() api.Config {
+	return a.config
 }
 
 type RedHatAccessTokenProvider struct {
@@ -37,7 +41,7 @@ func (r RedHatAccessTokenProvider) GetAllowedHostsValidator() *authentication.Al
 // New creates a new default API client wrapper
 func New(cfg *api.Config) *defaultKiotaAPIClient {
 	return &defaultKiotaAPIClient{
-		config: cfg,
+		config: *cfg,
 	}
 }
 

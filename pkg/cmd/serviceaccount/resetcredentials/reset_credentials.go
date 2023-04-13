@@ -3,9 +3,10 @@ package resetcredentials
 import (
 	"context"
 	"fmt"
-	"net/http"
+
 	"os"
 
+	svcacctmgmtclient "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/models"
 	"github.com/redhat-developer/app-services-cli/pkg/cmd/serviceaccount/svcaccountcmdutil"
 	"github.com/redhat-developer/app-services-cli/pkg/cmd/serviceaccount/svcaccountcmdutil/credentials"
 	"github.com/redhat-developer/app-services-cli/pkg/cmd/serviceaccount/svcaccountcmdutil/validation"
@@ -17,8 +18,8 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/core/localize"
 	"github.com/redhat-developer/app-services-cli/pkg/core/logging"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
-	svcacctmgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/serviceaccountmgmt/apiv1/client"
-	svcacctmgmterrors "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/serviceaccountmgmt/apiv1/error"
+	svcacctmgmterrors "github.com/redhat-developer/app-services-cli/pkg/shared/svcacctmgmtutil"
+	"net/http"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -106,13 +107,10 @@ func runResetCredentials(opts *options) (err error) {
 		return err
 	}
 
-	api := conn.API()
+	api := conn.KiotaAPI()
 
 	if opts.id != "" {
-		_, httpRes, newErr := api.ServiceAccountMgmt().GetServiceAccount(opts.Context, opts.id).Execute()
-		if httpRes != nil {
-			defer httpRes.Body.Close()
-		}
+		_, newErr := api.ServiceAccountMgmt().V1ById(opts.id).Get(opts.Context, nil)
 		if newErr != nil {
 			return newErr
 		}
@@ -158,12 +156,12 @@ func runResetCredentials(opts *options) (err error) {
 		return fmt.Errorf("%v: %w", opts.localizer.MustLocalize("serviceAccount.resetCredentials.error.resetError", localize.NewEntry("ID", opts.id)), err)
 	}
 
-	opts.Logger.Info(icon.SuccessPrefix(), opts.localizer.MustLocalize("serviceAccount.resetCredentials.log.info.resetSuccess", localize.NewEntry("ID", updatedServiceAccount.GetId())))
+	opts.Logger.Info(icon.SuccessPrefix(), opts.localizer.MustLocalize("serviceAccount.resetCredentials.log.info.resetSuccess", localize.NewEntry("ID", (*updatedServiceAccount).GetId())))
 
 	creds := &credentials.Credentials{
-		ClientID:     updatedServiceAccount.GetClientId(),
-		ClientSecret: updatedServiceAccount.GetSecret(),
-		TokenURL:     conn.API().GetConfig().AuthURL.String() + "/protocol/openid-connect/token",
+		ClientID:     *(*updatedServiceAccount).GetClientId(),
+		ClientSecret: *(*updatedServiceAccount).GetSecret(),
+		TokenURL:     conn.KiotaAPI().GetConfig().AuthURL.String() + "/protocol/openid-connect/token",
 	}
 
 	// save the credentials to a file
@@ -180,18 +178,21 @@ func runResetCredentials(opts *options) (err error) {
 	return nil
 }
 
-func resetCredentials(opts *options) (*svcacctmgmtclient.ServiceAccountData, error) {
+func resetCredentials(opts *options) (*svcacctmgmtclient.ServiceAccountDataable, error) {
 	conn, err := opts.Connection()
 	if err != nil {
 		return nil, err
 	}
 
 	// check if the service account exists
-	api := conn.API()
+	api := conn.KiotaAPI()
 
 	opts.Logger.Debug(opts.localizer.MustLocalize("serviceAccount.resetCredentials.log.debug.resettingCredentials", localize.NewEntry("ID", opts.id)))
 
-	serviceacct, httpRes, err := api.ServiceAccountMgmt().ResetServiceAccountSecret(opts.Context, opts.id).Execute()
+	var httpRes *http.Response // TODO httpRes
+
+	serviceacct, err := api.ServiceAccountMgmt().V1ById(opts.id).ResetSecret().Post(opts.Context, nil)
+
 	if httpRes != nil {
 		defer httpRes.Body.Close()
 	}
