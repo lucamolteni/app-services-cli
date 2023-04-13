@@ -18,7 +18,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	svcacctmgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/serviceaccountmgmt/apiv1/client"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/apis"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/models"
 )
 
 type options struct {
@@ -103,14 +104,17 @@ func runList(opts *options) (err error) {
 		return err
 	}
 
-	a := conn.API().ServiceAccountMgmt().GetServiceAccounts(opts.Context)
+	a := conn.KiotaAPI().ServiceAccountMgmt()
 
 	// Calculate offset based on page and size provided
 	calculatedFirst := (opts.page - 1) * opts.size
-	a = a.First(calculatedFirst)
-	a = a.Max(opts.size)
 
-	serviceaccounts, _, err := a.Execute()
+	serviceaccounts, err := a.V1().Get(opts.Context, &apis.Service_accountsV1RequestBuilderGetRequestConfiguration{
+		QueryParameters: &apis.Service_accountsV1RequestBuilderGetQueryParameters{
+			First: &calculatedFirst,
+			Max:   &opts.size,
+		},
+	})
 	if err != nil {
 		return err
 	}
@@ -132,17 +136,17 @@ func runList(opts *options) (err error) {
 	return nil
 }
 
-func mapResponseItemsToRows(svcAccts []svcacctmgmtclient.ServiceAccountData) []svcAcctRow {
+func mapResponseItemsToRows(svcAccts []models.ServiceAccountDataable) []svcAcctRow {
 	rows := make([]svcAcctRow, len(svcAccts))
 
 	for i, sa := range svcAccts {
 
 		row := svcAcctRow{
-			ID:        sa.GetId(),
-			Name:      sa.GetName(),
-			ClientID:  sa.GetClientId(),
-			Owner:     sa.GetCreatedBy(),
-			CreatedAt: unixTimestampToUTC(sa.GetCreatedAt()),
+			ID:        *sa.GetId(),
+			Name:      *sa.GetName(),
+			ClientID:  *sa.GetClientId(),
+			Owner:     *sa.GetCreatedBy(),
+			CreatedAt: unixTimestampToUTC(*sa.GetCreatedAt()),
 		}
 
 		rows[i] = row
