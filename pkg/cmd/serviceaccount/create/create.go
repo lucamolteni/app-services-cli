@@ -18,10 +18,12 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/core/logging"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
 
+	svcacctmgmtclient "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/models"
+	svcacctmgmterrors "github.com/redhat-developer/app-services-cli/pkg/shared/svcacctmgmtutil"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
-	svcacctmgmt "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/models"
 	"net/http"
 )
 
@@ -128,13 +130,15 @@ func runCreate(opts *options) error {
 	spinner.SetSuffix(opts.localizer.MustLocalize("serviceAccount.create.log.info.creating"))
 	spinner.Start()
 	// create the service account
-	serviceAccountPayload := &svcacctmgmt.ServiceAccountCreateRequestData{}
+	serviceAccountPayload := &svcacctmgmtclient.ServiceAccountCreateRequestData{}
 	serviceAccountPayload.SetName(&opts.shortDescription)
 
 	var httpRes *http.Response
 
-	serviceacct, err :=
-		conn.KiotaAPI().ServiceAccountMgmt().V1().Post(opts.Context, serviceAccountPayload, nil)
+	serviceacct, err := conn.KiotaAPI().
+		ServiceAccountMgmt().
+		V1().
+		Post(opts.Context, serviceAccountPayload, nil)
 
 	spinner.Stop()
 
@@ -142,14 +146,14 @@ func runCreate(opts *options) error {
 		defer httpRes.Body.Close()
 	}
 
-	//if apiErr := svcacctmgmtutil.GetAPIErrorK(err); apiErr != nil {
-	//	switch apiErr.GetError() {
-	//	case "service_account_limit_exceeded":
-	//		return opts.localizer.MustLocalizeError("serviceAccount.common.error.limitExceeded")
-	//	default:
-	//		return err
-	//	}
-	//}
+	if apiErr := svcacctmgmterrors.GetAPIErrorK(err); apiErr != nil {
+		switch apiErr.GetError().String() {
+		case "service_account_limit_exceeded":
+			return opts.localizer.MustLocalizeError("serviceAccount.common.error.limitExceeded")
+		default:
+			return err
+		}
+	}
 
 	opts.Logger.Info(icon.SuccessPrefix(), opts.localizer.MustLocalize("serviceAccount.create.log.info.createdSuccessfully", localize.NewEntry("ID", *serviceacct.GetId())))
 
