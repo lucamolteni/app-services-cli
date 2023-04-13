@@ -12,7 +12,7 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/core/logging"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
 
-	svcacctmgmterrors "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/serviceaccountmgmt/apiv1/error"
+	svcacctmgmterrors "github.com/redhat-developer/app-services-cli/pkg/shared/svcacctmgmtutil"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
@@ -79,13 +79,10 @@ func runDelete(opts *options) (err error) {
 		return err
 	}
 
-	_, httpRes, err := conn.API().ServiceAccountMgmt().GetServiceAccount(opts.Context, opts.id).Execute()
-	if httpRes != nil {
-		defer httpRes.Body.Close()
-	}
+	_, err = conn.KiotaAPI().ServiceAccountMgmt().V1ById(opts.id).Get(opts.Context, nil)
 
-	if apiErr := svcacctmgmterrors.GetAPIError(err); apiErr != nil {
-		switch apiErr.GetError() {
+	if apiErr := svcacctmgmterrors.GetAPIErrorK(err); apiErr != nil {
+		switch apiErr.GetError().String() {
 		case "service_account_not_found":
 			return opts.localizer.MustLocalizeError("serviceAccount.common.error.notFoundError", localize.NewEntry("ID", opts.id))
 		default:
@@ -119,13 +116,10 @@ func deleteServiceAccount(opts *options) error {
 		return err
 	}
 
-	httpRes, err := conn.API().ServiceAccountMgmt().DeleteServiceAccount(opts.Context, opts.id).Execute()
-	if httpRes != nil {
-		defer httpRes.Body.Close()
-	}
+	_, err = conn.KiotaAPI().ServiceAccountMgmt().V1ById(opts.id).Delete(opts.Context, nil)
 
-	if apiErr := svcacctmgmterrors.GetAPIError(err); apiErr != nil {
-		switch apiErr.GetError() {
+	if apiErr := svcacctmgmterrors.GetAPIErrorK(err); apiErr != nil {
+		switch apiErr.GetError().String() {
 		case "service_account_access_invalid":
 			return opts.localizer.MustLocalizeError("serviceAccount.common.error.forbidden", localize.NewEntry("Operation", "delete"))
 		case "service_account_not_found":
