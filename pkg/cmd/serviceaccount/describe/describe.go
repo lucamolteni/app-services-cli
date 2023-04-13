@@ -9,7 +9,7 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/core/ioutil/iostreams"
 	"github.com/redhat-developer/app-services-cli/pkg/core/localize"
 	"github.com/redhat-developer/app-services-cli/pkg/core/logging"
-	svcacctmgmterrors "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/serviceaccountmgmt/apiv1/error"
+	svcacctmgmterrors "github.com/redhat-developer/app-services-cli/pkg/shared/svcacctmgmtutil"
 
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
 
@@ -74,14 +74,11 @@ func runDescribe(opts *options) error {
 		return err
 	}
 
-	api := conn.API()
+	api := conn.KiotaAPI()
 
-	res, httpRes, err := api.ServiceAccountMgmt().GetServiceAccount(opts.Context, opts.id).Execute()
-	if httpRes != nil {
-		defer httpRes.Body.Close()
-	}
+	res, err := api.ServiceAccountMgmt().V1ById(opts.id).Get(opts.Context, nil)
 
-	if apiErr := svcacctmgmterrors.GetAPIError(err); apiErr != nil {
+	if apiErr := svcacctmgmterrors.GetAPIErrorK(err); apiErr != nil {
 		switch apiErr.GetError() {
 		case "service_account_not_found":
 			return opts.localizer.MustLocalizeError("serviceAccount.common.error.notFoundError", localize.NewEntry("ID", opts.id))

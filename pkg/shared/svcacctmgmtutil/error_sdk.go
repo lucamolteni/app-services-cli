@@ -2,43 +2,38 @@ package svcacctmgmtutil
 
 import (
 	"errors"
-	svcacctmgmtclient "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/models"
+	models "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/models"
 )
 
-// GetAPIErrorK gets a strongly typed error from an error
-func GetAPIErrorK(err error) *svcacctmgmtclient.RedHatErrorRepresentation {
+func GetAPIErrorK(err error) *ErrorWithString {
 
-	var openapiError GenericOpenAPIError
+	var redHatErrorRepresentationable models.RedHatErrorRepresentationable
 
-	if ok := errors.As(err, &openapiError); ok {
+	if ok := errors.As(err, &redHatErrorRepresentationable); ok {
 
-		rherr := svcacctmgmtclient.NewRedHatErrorRepresentation()
-		getError := openapiError.GetError()
+		if redHatErrorRepresentationable.GetError() != nil {
+			s := (*redHatErrorRepresentationable.GetError()).String()
 
-		if getError == nil {
-			return nil
+			return &ErrorWithString{error_code_string: &s}
+
 		}
 
-		rherr.SetErrorDescription(getError)
+		return nil
 
-		return rherr
 	}
 
 	return nil
+
 }
 
-// IsAPIError returns true if the error contains the errCode
-func IsAPIError(err error, code string) bool {
-	mappedErr := GetAPIErrorK(err)
-	if mappedErr == nil {
-		return false
+type ErrorWithString struct {
+	error_code_string *string
+}
+
+func (e ErrorWithString) GetError() string {
+	if e.error_code_string != nil {
+		return *e.error_code_string
+	} else {
+		return ""
 	}
-
-	return (*mappedErr.GetError()).String() == string(code)
-}
-
-// GenericOpenAPIError Provides access to the body, error and model on returned errors.
-type GenericOpenAPIError interface {
-	GetError() *string
-	GetErrorDescription() *string
 }
