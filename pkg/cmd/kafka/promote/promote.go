@@ -8,8 +8,8 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil"
 	"github.com/spf13/cobra"
 
-	kafkamgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/client"
-	kafkamgmtv1errors "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/error"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
+	kafkamgmtv1errors "github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil/errors"
 )
 
 type options struct {
@@ -78,40 +78,34 @@ func runPromote(opts *options) error {
 		return err
 	}
 
-	api := conn.API()
+	api := conn.KiotaAPI()
 
 	if opts.name != "" {
-		response, _, newErr := kafkautil.GetKafkaByName(opts.f.Context, api.KafkaMgmt(), opts.name)
+		response, _, newErr := kafkautil.GetKafkaByNameK(opts.f.Context, api.KafkaMgmt(), opts.name)
 		if newErr != nil {
 			return newErr
 		}
 
-		opts.id = response.GetId()
+		opts.id = *(*response).GetId()
 	}
 
-	a := api.KafkaMgmt().PromoteKafka(opts.f.Context, opts.id)
+	a := api.KafkaMgmt().V1().KafkasById(opts.id).Promote()
 
-	var promoteOptions kafkamgmtclient.KafkaPromoteRequest
+	var promoteOptions models.KafkaPromoteRequest
 
-	promoteOptions.SetDesiredKafkaBillingModel(opts.desiredBillingModel)
+	promoteOptions.SetDesiredKafkaBillingModel(&opts.desiredBillingModel)
 
 	if opts.marketplace != "" {
-		promoteOptions.SetDesiredMarketplace(opts.marketplace)
+		promoteOptions.SetDesiredMarketplace(&opts.marketplace)
 	}
 
 	if opts.marketplaceAcctId != "" {
-		promoteOptions.SetDesiredKafkaBillingModel(opts.marketplaceAcctId)
+		promoteOptions.SetDesiredKafkaBillingModel(&opts.marketplaceAcctId)
 	}
 
-	a = a.KafkaPromoteRequest(promoteOptions)
-	a = a.Async(true)
+	err = a.Post(opts.f.Context, &promoteOptions, nil)
 
-	httpRes, err := a.Execute()
-	if httpRes != nil {
-		defer httpRes.Body.Close()
-	}
-
-	if apiErr := kafkamgmtv1errors.GetAPIError(err); apiErr != nil {
+	if apiErr := kafkautil.GetAPIError(err); apiErr != nil {
 		switch apiErr.GetCode() {
 		case kafkamgmtv1errors.ERROR_120:
 			// For standard instances
