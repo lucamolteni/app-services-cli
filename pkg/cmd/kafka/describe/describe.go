@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
 	kafkaflagutil "github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/flagutil"
 	"github.com/redhat-developer/app-services-cli/pkg/core/cmdutil/flagutil"
 	"github.com/redhat-developer/app-services-cli/pkg/core/ioutil/dump"
@@ -15,7 +16,6 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/shared/contextutil"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil"
-	kafkamgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/client"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +24,7 @@ type options struct {
 	name            string
 	bootstrapServer bool
 	outputFormat    string
-	kafkaInstance   *kafkamgmtclient.KafkaRequest
+	kafkaInstance   *models.KafkaRequestable
 
 	IO             *iostreams.IOStreams
 	Connection     factory.ConnectionFunc
@@ -66,12 +66,12 @@ func NewDescribeCommand(f *factory.Factory) *cobra.Command {
 				return runDescribe(opts)
 			}
 
-			opts.kafkaInstance, err = contextutil.GetCurrentKafkaInstance(f)
+			opts.kafkaInstance, err = contextutil.GetCurrentKafkaInstanceK(f)
 			if err != nil {
 				return err
 			}
 
-			opts.id = opts.kafkaInstance.GetId()
+			opts.id = *(*opts.kafkaInstance).GetId()
 
 			return runDescribe(opts)
 		},
@@ -98,13 +98,13 @@ func runDescribe(opts *options) error {
 		return err
 	}
 
-	api := conn.API()
+	api := conn.KiotaAPI()
 
 	var httpRes *http.Response
 
 	if opts.kafkaInstance == nil {
 		if opts.name != "" {
-			opts.kafkaInstance, httpRes, err = kafkautil.GetKafkaByName(opts.Context, api.KafkaMgmt(), opts.name)
+			opts.kafkaInstance, httpRes, err = kafkautil.GetKafkaByNameK(opts.Context, api.KafkaMgmt(), opts.name)
 			if httpRes != nil {
 				defer httpRes.Body.Close()
 			}
@@ -112,7 +112,7 @@ func runDescribe(opts *options) error {
 				return err
 			}
 		} else {
-			opts.kafkaInstance, httpRes, err = kafkautil.GetKafkaByID(opts.Context, api.KafkaMgmt(), opts.id)
+			opts.kafkaInstance, httpRes, err = kafkautil.GetKafkaByIDK(opts.Context, api.KafkaMgmt(), opts.id)
 			if httpRes != nil {
 				defer httpRes.Body.Close()
 			}
@@ -123,11 +123,11 @@ func runDescribe(opts *options) error {
 	}
 
 	if opts.bootstrapServer {
-		if host, ok := opts.kafkaInstance.GetBootstrapServerHostOk(); ok {
-			fmt.Fprintln(opts.IO.Out, *host)
+		if opts.kafkaInstance != nil && (*opts.kafkaInstance).GetBootstrapServerHost() != nil {
+			fmt.Fprintln(opts.IO.Out, *(*opts.kafkaInstance).GetBootstrapServerHost())
 			return nil
 		}
-		opts.Logger.Info(opts.localizer.MustLocalize("kafka.describe.bootstrapserver.not.available", localize.NewEntry("Name", opts.kafkaInstance.GetName())))
+		opts.Logger.Info(opts.localizer.MustLocalize("kafka.describe.bootstrapserver.not.available", localize.NewEntry("Name", *(*opts.kafkaInstance).GetName())))
 		return nil
 	}
 

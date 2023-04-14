@@ -68,8 +68,10 @@ func (client *defaultKiotaAPIClient) adapter() *khttp.NetHttpRequestAdapter {
 func (client *defaultKiotaAPIClient) createHttpClient() *nethttp.Client {
 	var httpClient *nethttp.Client
 	if client.config.Logger.DebugEnabled() {
+		middlewares := khttp.GetDefaultMiddlewares()
 		logger := kiotalog.NewLoggingHandler(client.config.Logger)
-		httpClient = khttp.GetDefaultClient(logger)
+		withLogger := append(middlewares, logger)
+		httpClient = khttp.GetDefaultClient(withLogger...)
 	} else {
 		httpClient = khttp.GetDefaultClient()
 	}
