@@ -2,7 +2,7 @@ package svcacctmgmtutil
 
 import (
 	"errors"
-	models "github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/models"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/svcacctmgmt/models"
 )
 
 func GetAPIError(err error) *ErrorWithString {
@@ -14,7 +14,7 @@ func GetAPIError(err error) *ErrorWithString {
 		if redHatErrorRepresentationable.GetError() != nil {
 			s := (*redHatErrorRepresentationable.GetError()).String()
 
-			return &ErrorWithString{error_code_string: &s}
+			return &ErrorWithString{errorCodeString: &s}
 
 		}
 
@@ -27,12 +27,12 @@ func GetAPIError(err error) *ErrorWithString {
 }
 
 type ErrorWithString struct {
-	error_code_string *string
+	errorCodeString *string
 }
 
 func (e ErrorWithString) GetError() string {
-	if e.error_code_string != nil {
-		return *e.error_code_string
+	if e.errorCodeString != nil {
+		return *e.errorCodeString
 	} else {
 		return ""
 	}

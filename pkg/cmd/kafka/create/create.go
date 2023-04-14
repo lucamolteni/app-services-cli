@@ -8,8 +8,9 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/openshift-cluster/openshiftclustercmdutil"
 	"github.com/redhat-developer/app-services-cli/pkg/core/auth/token"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/connection/api/clustermgmt"
+	kafkamgmtv1errors "github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil/errors"
+
 	"github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil"
-	kafkamgmtv1errors "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/error"
 	"net/http"
 	"os"
 	"os/signal"
@@ -38,9 +39,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	kafkapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
 	kafkamgmtclient "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
-
-	nullablestring "github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil"
 )
 
 const (
@@ -372,7 +372,7 @@ func runCreate(opts *options) error {
 		defer httpRes.Body.Close()
 	}
 
-	if apiErr := kafkamgmtv1errors.GetAPIError(err); apiErr != nil {
+	if apiErr := kafkautil.GetAPIError(err); apiErr != nil {
 		switch apiErr.GetCode() {
 		case kafkamgmtv1errors.ERROR_120:
 			// For standard instances
@@ -769,9 +769,9 @@ func promptKafkaPayload(opts *options, constants *remote.DynamicServiceConstants
 
 		answers.Size = *sizes[index].GetId()
 
-		accountIDNullable := nullablestring.NullableString{}
-		marketplaceProviderNullable := nullablestring.NullableString{}
-		billingNullable := nullablestring.NullableString{}
+		accountIDNullable := kafkautil.NullableString{}
+		marketplaceProviderNullable := kafkautil.NullableString{}
+		billingNullable := kafkautil.NullableString{}
 
 		if answers.BillingModel != "" {
 			billingNullable.Set(&answers.BillingModel)
@@ -853,7 +853,7 @@ func doesUserHaveTrialInstances(opts *options) (bool, error) {
 		return false, err
 	}
 
-	api := conn.API()
+	api := conn.KiotaAPI()
 
 	cfg, err := opts.f.Config.Load()
 	if err != nil {
@@ -867,19 +867,25 @@ func doesUserHaveTrialInstances(opts *options) (bool, error) {
 
 	searchQuery := fmt.Sprintf("owner = %v", userName)
 
-	list, _, err := api.KafkaMgmt().GetKafkas(opts.f.Context).
-		Page(strconv.Itoa(1)).
-		Size(strconv.Itoa(1000)).
-		Search(searchQuery).
-		Execute()
+	kafkas := api.KafkaMgmt().V1().Kafkas()
+	page := strconv.Itoa(1)
+	size := strconv.Itoa(1000)
+
+	list, err := kafkas.Get(opts.f.Context, &kafkapi.Kafkas_mgmtV1KafkasRequestBuilderGetRequestConfiguration{
+		QueryParameters: &kafkapi.Kafkas_mgmtV1KafkasRequestBuilderGetQueryParameters{
+			Page:   &page,
+			Size:   &size,
+			Search: &searchQuery,
+		},
+	})
 
 	if err != nil {
 		return false, err
 	}
 
-	for i := int32(0); i < list.GetSize(); i++ {
-		kafka := list.Items[i]
-		if kafka.GetInstanceTypeName() == TrialInstanceType {
+	for i := int32(0); i < *list.GetSize(); i++ {
+		kafka := list.GetItems()[i]
+		if *kafka.GetInstanceTypeName() == TrialInstanceType {
 			return true, nil
 		}
 	}
@@ -1043,6 +1049,6 @@ func getClusterDetails(f *factory.Factory, clusterId string) (*kafkamgmtclient.E
 	return &cluster, nil
 }
 
-func CreateNullableString(str *string) nullablestring.NullableString {
-	return *nullablestring.NewNullableString(str)
+func CreateNullableString(str *string) kafkautil.NullableString {
+	return *kafkautil.NewNullableString(str)
 }
