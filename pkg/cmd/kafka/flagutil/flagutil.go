@@ -1,6 +1,7 @@
 package flagutil
 
 import (
+	kiotapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
 	"github.com/redhat-developer/app-services-cli/pkg/core/cmdutil/flagutil"
 	"github.com/redhat-developer/app-services-cli/pkg/core/localize"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
@@ -48,22 +49,26 @@ func RegisterNameFlagCompletionFunc(cmd *cobra.Command, f *factory.Factory) erro
 			return validNames, directive
 		}
 
-		req := conn.API().KafkaMgmt().GetKafkas(f.Context)
+		var searchQ *string
 		if toComplete != "" {
-			searchQ := "name like " + toComplete + "%"
-			req = req.Search(searchQ)
+			queryString := "name like " + toComplete + "%"
+			searchQ = &queryString
+
 		}
-		kafkas, httpRes, err := req.Execute()
+
+		kafkas, err := conn.KiotaAPI().KafkaMgmt().V1().Kafkas().Get(f.Context, &kiotapi.Kafkas_mgmtV1KafkasRequestBuilderGetRequestConfiguration{
+			QueryParameters: &kiotapi.Kafkas_mgmtV1KafkasRequestBuilderGetQueryParameters{
+				Search: searchQ,
+			},
+		})
+
 		if err != nil {
 			return validNames, directive
-		}
-		if httpRes != nil {
-			defer httpRes.Body.Close()
 		}
 
 		items := kafkas.GetItems()
 		for index := range items {
-			validNames = append(validNames, items[index].GetName())
+			validNames = append(validNames, *items[index].GetName())
 		}
 
 		return validNames, directive
