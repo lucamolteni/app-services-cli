@@ -3,20 +3,19 @@ package delete
 import (
 	"context"
 	"fmt"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
 
 	kafkaflagutil "github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/flagutil"
 	"github.com/redhat-developer/app-services-cli/pkg/core/cmdutil/flagutil"
 	"github.com/redhat-developer/app-services-cli/pkg/core/servicecontext"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/redhat-developer/app-services-cli/pkg/core/ioutil/iostreams"
 	"github.com/redhat-developer/app-services-cli/pkg/core/localize"
 	"github.com/redhat-developer/app-services-cli/pkg/core/logging"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/contextutil"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil"
-	kafkamgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/client"
-
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +23,7 @@ type options struct {
 	id            string
 	name          string
 	skipConfirm   bool
-	kafkaInstance *kafkamgmtclient.KafkaRequest
+	kafkaInstance *models.KafkaRequestable
 
 	IO             *iostreams.IOStreams
 	Connection     factory.ConnectionFunc
@@ -64,12 +63,12 @@ func NewDeleteCommand(f *factory.Factory) *cobra.Command {
 				return runDelete(opts)
 			}
 
-			opts.kafkaInstance, err = contextutil.GetCurrentKafkaInstance(f)
+			opts.kafkaInstance, err = contextutil.GetCurrentKafkaInstanceK(f)
 			if err != nil {
 				return err
 			}
 
-			opts.id = opts.kafkaInstance.GetId()
+			opts.id = *(*opts.kafkaInstance).GetId()
 
 			return runDelete(opts)
 		},
@@ -104,23 +103,23 @@ func runDelete(opts *options) error {
 		return err
 	}
 
-	api := conn.API()
+	api := conn.KiotaAPI()
 
 	if opts.kafkaInstance == nil {
 		if opts.name != "" {
-			opts.kafkaInstance, _, err = kafkautil.GetKafkaByName(opts.Context, api.KafkaMgmt(), opts.name)
+			opts.kafkaInstance, _, err = kafkautil.GetKafkaByNameK(opts.Context, api.KafkaMgmt(), opts.name)
 			if err != nil {
 				return err
 			}
 		} else {
-			opts.kafkaInstance, _, err = kafkautil.GetKafkaByID(opts.Context, api.KafkaMgmt(), opts.id)
+			opts.kafkaInstance, _, err = kafkautil.GetKafkaByIDK(opts.Context, api.KafkaMgmt(), opts.id)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	kafkaName := opts.kafkaInstance.GetName()
+	kafkaName := *(*opts.kafkaInstance).GetName()
 
 	if !opts.skipConfirm {
 		promptConfirmName := &survey.Input{
@@ -141,9 +140,7 @@ func runDelete(opts *options) error {
 
 	// delete the Kafka
 	opts.Logger.Debug(opts.localizer.MustLocalize("kafka.delete.log.debug.deletingKafka"), fmt.Sprintf("\"%s\"", kafkaName))
-	a := api.KafkaMgmt().DeleteKafkaById(opts.Context, opts.kafkaInstance.GetId())
-	a = a.Async(true)
-	_, _, err = a.Execute()
+	_, err = api.KafkaMgmt().V1().KafkasById(*(*opts.kafkaInstance).GetId()).Delete(opts.Context, nil)
 
 	if err != nil {
 		return err
@@ -153,7 +150,7 @@ func runDelete(opts *options) error {
 
 	currentKafka := currCtx.KafkaID
 	// this is not the current instance, our work here is done
-	if currentKafka != opts.kafkaInstance.GetId() {
+	if currentKafka != *(*opts.kafkaInstance).GetId() {
 		return nil
 	}
 

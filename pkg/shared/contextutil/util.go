@@ -2,6 +2,7 @@ package contextutil
 
 import (
 	"context"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
 
 	"github.com/redhat-developer/app-services-cli/pkg/core/localize"
 	"github.com/redhat-developer/app-services-cli/pkg/core/servicecontext"
@@ -16,6 +17,8 @@ import (
 
 	kafkamgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/client"
 	kafkamgmtv1errors "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/error"
+
+	"github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil"
 )
 
 // GetContext returns the services associated with the context
@@ -76,6 +79,39 @@ func GetKafkaForServiceConfig(currCtx *servicecontext.ServiceConfig, f *factory.
 	}
 
 	return &kafkaInstance, nil
+}
+
+// GetCurrentKafkaInstance returns the Kafka instance set in the currently selected context
+func GetCurrentKafkaInstanceK(f *factory.Factory) (*models.KafkaRequestable, error) {
+
+	svcContext, err := f.ServiceContext.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	currCtx, err := GetCurrentContext(svcContext, f.Localizer)
+	if err != nil {
+		return nil, err
+	}
+
+	return GetKafkaForServiceConfigK(currCtx, f)
+}
+
+func GetKafkaForServiceConfigK(currCtx *servicecontext.ServiceConfig, f *factory.Factory) (*models.KafkaRequestable, error) {
+	conn, err := f.Connection()
+	if err != nil {
+		return nil, err
+	}
+	if currCtx.KafkaID == "" {
+		return nil, f.Localizer.MustLocalizeError("context.common.error.noKafkaID")
+	}
+
+	kafkaInstance, _, err := kafkautil.GetKafkaByIDK(context.Background(), conn.KiotaAPI().KafkaMgmt(), currCtx.KafkaID)
+	if kafkamgmtv1errors.IsAPIError(err, kafkamgmtv1errors.ERROR_7) {
+		return nil, f.Localizer.MustLocalizeError("context.common.error.kafka.notFound")
+	}
+
+	return kafkaInstance, nil
 }
 
 // GetCurrentRegistryInstance returns the Service Registry instance set in the currently selected context

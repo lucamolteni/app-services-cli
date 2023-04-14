@@ -37,3 +37,13 @@ func (e ErrorWithCode) GetCode() string {
 		return ""
 	}
 }
+
+// IsAPIError returns true if the error contains the errCode
+func IsAPIError(err error, code string) bool {
+	mappedErr := GetAPIError(err)
+	if mappedErr == nil {
+		return false
+	}
+
+	return mappedErr.GetCode() == string(code)
+}
