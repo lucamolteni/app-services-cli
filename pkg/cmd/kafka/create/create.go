@@ -8,9 +8,9 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/cmd/kafka/openshift-cluster/openshiftclustercmdutil"
 	"github.com/redhat-developer/app-services-cli/pkg/core/auth/token"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/connection/api/clustermgmt"
+	"github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil"
 	kafkamgmtv1errors "github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil/errors"
 
-	"github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil"
 	"net/http"
 	"os"
 	"os/signal"

@@ -3,6 +3,8 @@ package update
 import (
 	"context"
 	"fmt"
+	kafkamgmtapi "github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/api"
+	"github.com/redhat-developer/app-services-cli/pkg/apisdk/kafkamgmt/models"
 	"reflect"
 	"strconv"
 	"strings"
@@ -23,9 +25,6 @@ import (
 	"github.com/redhat-developer/app-services-cli/pkg/shared/contextutil"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/factory"
 	"github.com/redhat-developer/app-services-cli/pkg/shared/kafkautil"
-	kafkamgmtclient "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/client"
-	kafkamgmtv1errors "github.com/redhat-developer/app-services-sdk-core/app-services-sdk-go/kafkamgmt/apiv1/error"
-
 	"github.com/spf13/cobra"
 
 	"github.com/redhat-developer/app-services-cli/internal/build"
@@ -134,7 +133,7 @@ func run(opts *options) error {
 		return err
 	}
 
-	api := conn.API()
+	api := conn.KiotaAPI()
 
 	kafkaInstance, err := getCurrentKafkaInstance(opts, api.KafkaMgmt())
 	if err != nil {
@@ -181,22 +180,16 @@ func run(opts *options) error {
 	}
 
 	s := spinner.New(opts.IO.ErrOut, opts.localizer)
-	s.SetLocalizedSuffix("kafka.update.log.info.updating", localize.NewEntry("Name", kafkaInstance.GetName()))
+	s.SetLocalizedSuffix("kafka.update.log.info.updating", localize.NewEntry("Name", *(*kafkaInstance).GetName()))
 	s.Start()
 
-	response, httpRes, err := api.KafkaMgmt().
-		UpdateKafkaById(opts.Context, kafkaInstance.GetId()).
-		KafkaUpdateRequest(*updateObj).
-		Execute()
-
-	if httpRes != nil {
-		defer httpRes.Body.Close()
-	}
+	patchRequest, err := getUpdateObj(opts, kafkaInstance)
+	response, err := api.KafkaMgmt().V1().KafkasById(*(*kafkaInstance).GetId()).Patch(opts.Context, patchRequest, nil)
 
 	s.Stop()
 
 	if err != nil {
-		if apiError := kafkamgmtv1errors.GetAPIError(err); apiError != nil {
+		if apiError := kafkautil.GetAPIError(err); apiError != nil {
 			return opts.localizer.MustLocalizeError("kafka.update.log.info.updateFailed", localize.NewEntry("Reason", apiError.GetReason()))
 		}
 		return err
@@ -208,7 +201,7 @@ func run(opts *options) error {
 	return nil
 }
 
-func runInteractivePrompt(opts *options, kafkaInstance *kafkamgmtclient.KafkaRequest) (err error) {
+func runInteractivePrompt(opts *options, kafkaInstance *models.KafkaRequestable) (err error) {
 
 	if opts.userIsOrgAdmin {
 		opts.owner, err = selectOwnerInteractive(opts.Context, opts)
@@ -234,7 +227,7 @@ func runInteractivePrompt(opts *options, kafkaInstance *kafkamgmtclient.KafkaReq
 	reauthenticationPrompt := &survey.Select{
 		Message: opts.localizer.MustLocalize("kafka.update.input.message.reauthentication"),
 		Options: flagutil.ValidTribools,
-		Default: strconv.FormatBool(kafkaInstance.GetReauthenticationEnabled()),
+		Default: strconv.FormatBool(*(*kafkaInstance).GetReauthenticationEnabled()),
 	}
 
 	var reauthStr string
@@ -339,44 +332,44 @@ func generateUpdateSummary(new reflect.Value, current reflect.Value) string {
 	return summary
 }
 
-func getCurrentKafkaInstance(opts *options, api kafkamgmtclient.DefaultApi) (kafkaInstance *kafkamgmtclient.KafkaRequest, err error) {
+func getCurrentKafkaInstance(opts *options, api *kafkamgmtapi.Kafkas_mgmtRequestBuilder) (kafkaInstance *models.KafkaRequestable, err error) {
 
 	if opts.name != "" {
-		kafkaInstance, _, err = kafkautil.GetKafkaByName(opts.Context, api, opts.name)
+		kafkaInstance, _, err = kafkautil.GetKafkaByNameK(opts.Context, api, opts.name)
 		if err != nil {
 			return nil, err
 		}
-		opts.id = kafkaInstance.GetName()
+		opts.id = *(*kafkaInstance).GetName()
 	} else {
-		kafkaInstance, _, err = kafkautil.GetKafkaByID(opts.Context, api, opts.id)
+		kafkaInstance, _, err = kafkautil.GetKafkaByIDK(opts.Context, api, opts.id)
 		if err != nil {
 			return nil, err
 		}
-		opts.name = kafkaInstance.GetName()
+		opts.name = *(*kafkaInstance).GetName()
 	}
 
 	return kafkaInstance, nil
 }
 
-func getUpdateObj(opts *options, kafkaInstance *kafkamgmtclient.KafkaRequest) (*kafkamgmtclient.KafkaUpdateRequest, error) {
+func getUpdateObj(opts *options, kafkaInstance *models.KafkaRequestable) (*models.KafkaUpdateRequest, error) {
 
 	// track if values have been changed
 	var needsUpdate bool
 
-	updateObj := kafkamgmtclient.NewKafkaUpdateRequest()
+	updateObj := models.NewKafkaUpdateRequest()
 
-	if opts.owner != "" && opts.owner != kafkaInstance.GetOwner() {
-		updateObj.SetOwner(opts.owner)
+	if opts.owner != "" && opts.owner != *(*kafkaInstance).GetOwner() {
+		updateObj.SetOwner(&opts.owner)
 		needsUpdate = true
 	}
 
-	if opts.reauth != flagutil.TRIBOOL_DEFAULT && string(opts.reauth) != strconv.FormatBool(kafkaInstance.GetReauthenticationEnabled()) {
+	if opts.reauth != flagutil.TRIBOOL_DEFAULT && string(opts.reauth) != strconv.FormatBool(*(*kafkaInstance).GetReauthenticationEnabled()) {
 		enableBool, newErr := strconv.ParseBool(string(opts.reauth))
 		if newErr != nil {
 			return nil, newErr
 		}
 
-		updateObj.SetReauthenticationEnabled(enableBool)
+		updateObj.SetReauthenticationEnabled(&enableBool)
 		needsUpdate = true
 	}
 

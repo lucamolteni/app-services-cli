@@ -10,16 +10,7 @@ func GetAPIError(err error) *ErrorWithCode {
 	var kafkaError models.Errorable
 
 	if ok := errors.As(err, &kafkaError); ok {
-
-		if kafkaError.GetCode() != nil {
-			s := *kafkaError.GetCode()
-
-			return &ErrorWithCode{errorCodeString: &s}
-
-		}
-
-		return nil
-
+		return &ErrorWithCode{errorCodeString: kafkaError.GetCode(), reason: kafkaError.GetReason()}
 	}
 
 	return nil
@@ -28,11 +19,20 @@ func GetAPIError(err error) *ErrorWithCode {
 
 type ErrorWithCode struct {
 	errorCodeString *string
+	reason          *string
 }
 
 func (e ErrorWithCode) GetCode() string {
 	if e.errorCodeString != nil {
 		return *e.errorCodeString
+	} else {
+		return ""
+	}
+}
+
+func (e ErrorWithCode) GetReason() string {
+	if e.reason != nil {
+		return *e.reason
 	} else {
 		return ""
 	}
